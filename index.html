@@ -59,12 +59,21 @@
             <p id="error" class="error" hidden></p>
         </main>
 
+        <template id="organisation-template">
+            <section class="organisation-group">
+                <div class="organisation-heading">
+                    <span class="material-symbols-outlined" aria-hidden="true">business</span>
+                    <h2 class="organisation-name"></h2>
+                    <span class="organisation-total"></span>
+                </div>
+                <div class="organisation-teams"></div>
+            </section>
+        </template>
         <template id="team-template">
             <section class="team-group collapsed">
                 <div class="team-heading" role="button" tabindex="0" aria-expanded="false">
                     <div class="team-heading-content">
                         <h2 class="team-code"></h2>
-                        <h2 class="organisation"></h2>
                         <span class="team-total"></span>
                     </div>
                     <span class="team-actions" aria-label="Set attendance for entire team">

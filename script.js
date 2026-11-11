@@ -20,6 +20,7 @@ const resetButton = document.querySelector("#reset-attendance");
 const toggleTeamsButton = document.querySelector("#toggle-teams");
 const toggleTeamsIcon = document.querySelector("#toggle-teams-icon");
 const teamTemplate = document.querySelector("#team-template");
+const organisationTemplate = document.querySelector("#organisation-template");
 const personTemplate = document.querySelector("#person-template");
 const statusButtonTemplate = document.querySelector("#status-button-template");
 const emptyTemplate = document.querySelector("#empty-template");
@@ -244,11 +245,21 @@ function render() {
         (teams[record.teamCode] ||= []).push(record);
         return teams;
     }, {});
-    Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).forEach(([team, records]) => {
+    const organisationGroups = Object.entries(groups).reduce((organisations, teamGroup) => {
+        const organisation = teamGroup[1][0].organisation;
+        (organisations[organisation] ||= []).push(teamGroup);
+        return organisations;
+    }, {});
+    Object.entries(organisationGroups).sort(([a], [b]) => a.localeCompare(b)).forEach(([organisation, teams]) => {
+        const organisationGroup = organisationTemplate.content.firstElementChild.cloneNode(true);
+        organisationGroup.querySelector(".organisation-name").textContent = display(organisation);
+        organisationGroup.querySelector(".organisation-total").textContent = `${teams.length} ${teams.length === 1 ? "team" : "teams"}`;
+        const organisationTeams = organisationGroup.querySelector(".organisation-teams");
+
+        teams.sort(([a], [b]) => a.localeCompare(b)).forEach(([team, records]) => {
         const group = teamTemplate.content.firstElementChild.cloneNode(true);
         const teamRecords = state.records.filter((record) => record.teamCode === team);
         group.style.setProperty("--team-gradient", getTeamGradient(teamRecords));
-        group.querySelector(".organisation").textContent = display(records[0].organisation);
         group.querySelector(".team-code").textContent = display(team);
         group.querySelector(".team-total").textContent = `${records.length} ${records.length === 1 ? "person" : "people"}`;
         group.querySelectorAll("[data-team-status]").forEach((button) => { button.dataset.team = team; });
@@ -283,13 +294,15 @@ function render() {
             person.querySelector(".status-placeholder").replaceWith(createStatusButtons(record, currentStatus));
             membersContent.append(person);
         });
-        results.append(group);
+        organisationTeams.append(group);
         if (isExpanded) {
             members.style.transition = "none";
             members.style.maxHeight = `${members.scrollHeight}px`;
             void members.offsetHeight;
             requestAnimationFrame(() => { members.style.transition = ""; });
         }
+        });
+        results.append(organisationGroup);
     });
     updateToggleTeamsButton();
 }

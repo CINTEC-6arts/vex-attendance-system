@@ -285,6 +285,39 @@ select:focus {
     gap: 16px;
 }
 
+.organisation-group {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(24, 34, 56, 0.62);
+}
+
+.organisation-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 4px;
+    color: var(--accent);
+}
+
+.organisation-heading h2 {
+    margin: 0;
+    color: var(--ink);
+    font-size: 15px;
+}
+
+.organisation-total {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.organisation-teams {
+    display: grid;
+    gap: 10px;
+}
+
 .team-group {
     position: relative;
     isolation: isolate;
@@ -337,12 +370,6 @@ select:focus {
 .team-heading h2 {
     margin: 0;
     font-size: 18px;
-}
-
-.organisation {
-    margin-left: 6px;
-    font-size: 12px;
-    font-weight: 500;
 }
 
 .team-heading-content {
