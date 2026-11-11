@@ -74,27 +74,31 @@
         <template id="team-template">
             <section class="team-group collapsed">
                 <div class="team-heading" role="button" tabindex="0" aria-expanded="false">
-                    <div class="team-heading-content">
-                        <h2 class="team-code"></h2>
-                        <span class="team-total"></span>
+                    <div class="team-heading-content-wrapper">
+                        <div class="team-heading-content">
+                            <h2 class="team-code"></h2>
+                            <span class="team-total"></span>
+                        </div>
+                        <span class="team-actions" aria-label="Set attendance for entire team">
+                            <button class="team-action unprocessed" type="button" title="Mark entire team unprocessed" aria-label="Mark entire team unprocessed" data-team-status="unprocessed">
+                                <span class="material-symbols-outlined" aria-hidden="true">question_mark</span>
+                            </button>
+                            <button class="team-action present" type="button" title="Confirm entire team present" aria-label="Confirm entire team present" data-team-status="present">
+                                <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                            </button>
+                            <button class="team-action absent" type="button" title="Confirm entire team absent" aria-label="Confirm entire team absent" data-team-status="absent">
+                                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                            </button>
+                            <button class="team-action flagged" type="button" title="Flag entire team for a problem" aria-label="Flag entire team for a problem" data-team-status="flagged">
+                                <span class="material-symbols-outlined" aria-hidden="true">flag</span>
+                            </button>
+                        </span>
                     </div>
-                    <span class="team-actions" aria-label="Set attendance for entire team">
-                        <button class="team-action unprocessed" type="button" title="Mark entire team unprocessed" aria-label="Mark entire team unprocessed" data-team-status="unprocessed">
-                            <span class="material-symbols-outlined" aria-hidden="true">question_mark</span>
-                        </button>
-                        <button class="team-action present" type="button" title="Confirm entire team present" aria-label="Confirm entire team present" data-team-status="present">
-                            <span class="material-symbols-outlined" aria-hidden="true">check</span>
-                        </button>
-                        <button class="team-action absent" type="button" title="Confirm entire team absent" aria-label="Confirm entire team absent" data-team-status="absent">
-                            <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                        </button>
-                        <button class="team-action flagged" type="button" title="Flag entire team for a problem" aria-label="Flag entire team for a problem" data-team-status="flagged">
-                            <span class="material-symbols-outlined" aria-hidden="true">flag</span>
-                        </button>
-                    </span>
                 </div>
-                <div class="team-members">
-                    <div class="team-members-content"></div>
+                <div class="team-members-wrapper">
+                    <div class="team-members">
+                        <div class="team-members-content"></div>
+                    </div>
                 </div>
             </section>
         </template>

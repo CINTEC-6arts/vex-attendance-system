@@ -29,6 +29,19 @@ const expandedTeams = new Set();
 const teamAnimationDuration = 260;
 const attendanceStatuses = ["unprocessed", "present", "absent", "flagged"];
 
+function updateStickyOffsets() {
+    const toolbarHeight = controlToolbar.getBoundingClientRect().height;
+    const organisationHeading = results.querySelector(".organisation-heading");
+    const organisationHeadingHeight = organisationHeading
+        ? organisationHeading.getBoundingClientRect().height
+        : 42;
+    document.documentElement.style.setProperty("--sticky-toolbar-height", `${toolbarHeight}px`);
+    document.documentElement.style.setProperty("--organisation-heading-height", `${organisationHeadingHeight}px`);
+}
+
+const stickyOffsetObserver = new ResizeObserver(updateStickyOffsets);
+stickyOffsetObserver.observe(controlToolbar);
+
 const today = new Date();
 const todayKey = today.toISOString().slice(0, 10);
 dateLabel.textContent = today.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
@@ -252,6 +265,7 @@ function render() {
 
     if (!filteredTeams.size) {
         results.append(emptyTemplate.content.cloneNode(true));
+        updateStickyOffsets();
         return;
     }
 
@@ -331,6 +345,7 @@ function render() {
         });
     });
     updateToggleTeamsButton();
+    updateStickyOffsets();
 }
 
 function renderPreservingScroll() {
