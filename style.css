@@ -296,6 +296,16 @@ select:focus {
     color: #c62828;
 }
 
+.team-action.flagged:hover,
+.team-action.flagged:focus-visible {
+    color: #ffc83d;
+}
+
+.team-action.unprocessed:hover,
+.team-action.unprocessed:focus-visible {
+    color: var(--accent);
+}
+
 .team-action .material-symbols-outlined {
     font-size: 18px;
 }

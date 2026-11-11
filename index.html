@@ -59,11 +59,17 @@
                         <span class="team-total"></span>
                     </div>
                     <div class="team-actions" aria-label="Set attendance for entire team">
+                        <button class="team-action unprocessed" type="button" title="Mark entire team unprocessed" aria-label="Mark entire team unprocessed" data-team-status="unprocessed">
+                            <span class="material-symbols-outlined" aria-hidden="true">question_mark</span>
+                        </button>
                         <button class="team-action present" type="button" title="Confirm entire team present" aria-label="Confirm entire team present" data-team-status="present">
                             <span class="material-symbols-outlined" aria-hidden="true">check</span>
                         </button>
                         <button class="team-action absent" type="button" title="Confirm entire team absent" aria-label="Confirm entire team absent" data-team-status="absent">
                             <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                        </button>
+                        <button class="team-action flagged" type="button" title="Flag entire team for a problem" aria-label="Flag entire team for a problem" data-team-status="flagged">
+                            <span class="material-symbols-outlined" aria-hidden="true">flag</span>
                         </button>
                     </div>
                 </div>
