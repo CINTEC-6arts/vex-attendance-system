@@ -264,7 +264,13 @@ function render() {
         (organisations[organisation] ||= []).push(teamGroup);
         return organisations;
     }, {});
-    Object.entries(organisationGroups).sort(([a], [b]) => a.localeCompare(b)).forEach(([organisation, teams]) => {
+    Object.entries(organisationGroups)
+        .sort(([, teamsA], [, teamsB]) => {
+            const firstTeamA = teamsA.map(([team]) => team).sort()[0];
+            const firstTeamB = teamsB.map(([team]) => team).sort()[0];
+            return firstTeamA.localeCompare(firstTeamB);
+        })
+        .forEach(([organisation, teams]) => {
         const organisationGroup = organisationTemplate.content.firstElementChild.cloneNode(true);
         highlightText(organisationGroup.querySelector(".organisation-name"), organisation, query);
         organisationGroup.querySelector(".organisation-total").textContent = `${teams.length} ${teams.length === 1 ? "team" : "teams"}`;
@@ -290,7 +296,7 @@ function render() {
             if (event.target.closest("[data-team-status]")) return;
             setTeamExpanded(group, group.classList.contains("collapsed"));
             updateToggleTeamsButton();
-        });
+            });
         teamHeading.addEventListener("keydown", (event) => {
             if (event.target.closest("[data-team-status]")) return;
             if (event.key !== "Enter" && event.key !== " ") return;
