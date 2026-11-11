@@ -17,9 +17,14 @@
 
             <div class="control-toolbar-wrapper">
                 <section class="control-toolbar" aria-label="Attendance search and controls">
-                    <p class="attendance-date"><strong id="attendance-date"></strong><span>Attendance session</span></p>
+                    <label class="select-wrap">
+                        <select id="event-filter" aria-label="Choose event">
+                            <option value="">Loading events...</option>
+                        </select>
+                        <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
+                    </label>
                     <div class="actions">
-                        <button id="reset-attendance" class="action-button secondary icon-action" type="button" aria-label="Reset session" title="Reset session">
+                        <button id="reset-attendance" class="action-button secondary danger icon-action" type="button" aria-label="Reset event attendance" title="Reset event attendance">
                             <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
                         </button>
                     </div>

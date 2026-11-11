@@ -3,9 +3,10 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "rm -rf dist && bun build index.html --outdir=dist --sourcemap=external && bun run _copy-assets",
-        "watch": "bun run _copy-assets && bun build index.html --outdir=dist --sourcemap=external --watch",
-        "_copy-assets": "bun -e \"import { cp } from 'node:fs/promises'; await cp('assets', 'dist/assets', { recursive: true });\"",
+        "build": "rm -rf dist && bun build index.html --outdir=dist --sourcemap=external && bun run _copy-assets && bun run _generate-events",
+        "watch": "bun run _copy-assets && bun run _generate-events && bun build index.html --outdir=dist --sourcemap=external --watch",
+        "_copy-assets": "bun scripts/copy-assets.ts",
+        "_generate-events": "bun scripts/generate-events.ts",
         "typecheck": "tsc --noEmit"
     },
     "devDependencies": {

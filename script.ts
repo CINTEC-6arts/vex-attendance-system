@@ -17,6 +17,12 @@ type RecordEntry = {
     school: string;
     image: string;
 };
+type EventDefinition = {
+    id: string;
+    label: string;
+};
+
+let events: EventDefinition[] = [];
 
 const query = <T extends Element>(selector: string): T => {
     const element = document.querySelector<T>(selector);
@@ -31,6 +37,7 @@ const child = <T extends Element>(parent: Element, selector: string): T => {
 
 const state = {
     records: [] as RecordEntry[],
+    eventId: "",
     query: "",
     teamCode: "",
     statusFilter: "",
@@ -38,6 +45,7 @@ const state = {
 };
 const searchInput = query<HTMLInputElement>("#search");
 const clearButton = query<HTMLButtonElement>("#clear");
+const eventFilter = query<HTMLSelectElement>("#event-filter");
 const teamFilter = query<HTMLSelectElement>("#team-filter");
 const divisionFilter = query<HTMLSelectElement>("#division-filter");
 const statusFilter = query<HTMLSelectElement>("#status-filter");
@@ -47,7 +55,6 @@ const results = query<HTMLElement>("#results");
 const resultCount = query<HTMLElement>("#result-count");
 const statusElement = query<HTMLElement>("#status");
 const error = query<HTMLElement>("#error");
-const dateLabel = query<HTMLElement>("#attendance-date");
 const resetButton = query<HTMLButtonElement>("#reset-attendance");
 const toggleTeamsButton = query<HTMLButtonElement>("#toggle-teams");
 const toggleTeamsIcon = query<HTMLElement>("#toggle-teams-icon");
@@ -61,10 +68,13 @@ const expandedTeams = new Set<string>();
 const teamAnimationDuration = 260;
 const attendanceStatuses: AttendanceStatus[] = [AttendanceStatus.UNPROCESSED, AttendanceStatus.PRESENT, AttendanceStatus.ABSENT, AttendanceStatus.FLAGGED];
 const isAttendanceStatus = (value: string): value is AttendanceStatus => attendanceStatuses.includes(value as AttendanceStatus);
-const assetPaths = {
-    data: "assets/data.csv",
-    images: "assets/images/",
-} as const;
+const eventListPath = "events.txt";
+function getAssetPaths(eventId: string) {
+    return {
+        data: `assets/${eventId}/data.csv`,
+        images: `assets/${eventId}/images/`,
+    };
+}
 
 function updateStickyOffsets() {
     const toolbarHeight = controlToolbar.getBoundingClientRect().height;
@@ -79,12 +89,8 @@ function updateStickyOffsets() {
 const stickyOffsetObserver = new ResizeObserver(updateStickyOffsets);
 stickyOffsetObserver.observe(controlToolbar);
 
-const today = new Date();
-const todayKey = today.toISOString().slice(0, 10);
-dateLabel.textContent = today.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-
 function attendanceKey(record) {
-    return `${todayKey}:${record.teamCode}:${record.division}:${record.name}`;
+    return `${state.eventId}:${record.teamCode}:${record.division}:${record.name}`;
 }
 
 function getAttendanceStatus(record) {
@@ -182,6 +188,7 @@ function parseCSV(text: string): RecordEntry[] {
 }
 
 async function loadRecords() {
+    const assetPaths = getAssetPaths(state.eventId);
     const response = await fetch(assetPaths.data);
     if (!response.ok) throw new Error(`Could not load ${assetPaths.data} (${response.status} ${response.statusText}).`);
     state.records = parseCSV(await response.text());
@@ -386,7 +393,7 @@ function render(): void {
                     const person = personTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
                     const currentStatus = getAttendanceStatus(record);
                     person.classList.add(currentStatus);
-                    child<HTMLImageElement>(person, ".person-image").src = `${assetPaths.images}${encodeURIComponent(record.image)}`;
+                    child<HTMLImageElement>(person, ".person-image").src = `${getAssetPaths(state.eventId).images}${encodeURIComponent(record.image)}`;
                     child<HTMLImageElement>(person, ".person-image").alt = display(record.name);
                     person.dataset.teamCode = record.teamCode;
                     person.dataset.division = record.division;
@@ -422,6 +429,7 @@ function renderPreservingScroll() {
 }
 
 function populateTeams() {
+    teamFilter.replaceChildren(new Option("All teams", ""));
     [...new Set(state.records.map((record) => record.teamCode).filter(Boolean))]
         .sort()
         .forEach((team) => {
@@ -432,7 +440,31 @@ function populateTeams() {
         });
 }
 
+function populateEvents() {
+    eventFilter.replaceChildren();
+    events.forEach((event) => {
+        eventFilter.append(new Option(event.label, event.id));
+    });
+    eventFilter.value = state.eventId;
+}
+
+async function loadEvents() {
+    const response = await fetch(eventListPath);
+    if (!response.ok) throw new Error(`Could not load ${eventListPath} (${response.status} ${response.statusText}).`);
+    const eventIds = (await response.text())
+        .split(/\r?\n/)
+        .map((eventId) => eventId.trim())
+        .filter(Boolean);
+    if (!eventIds.length) throw new Error("No event folders were detected during the build.");
+    events = eventIds.map((id) => ({
+        id,
+        label: id.replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    }));
+    state.eventId = events[0].id;
+}
+
 function populateDivisions() {
+    divisionFilter.replaceChildren(new Option("All divisions", ""));
     ["ES", "MS"].forEach((division) => {
         const option = document.createElement("option");
         option.value = division;
@@ -441,9 +473,51 @@ function populateDivisions() {
     });
 }
 
+function clearEventFilters() {
+    searchInput.value = "";
+    teamFilter.value = "";
+    divisionFilter.value = "";
+    statusFilter.value = "";
+    state.query = "";
+    state.teamCode = "";
+    state.statusFilter = "";
+    expandedTeams.clear();
+}
+
+async function switchEvent(eventId: string) {
+    if (!events.some((event) => event.id === eventId)) return;
+    state.eventId = eventId;
+    clearEventFilters();
+    results.replaceChildren();
+    error.hidden = true;
+    statusElement.textContent = "Loading event records...";
+    try {
+        await loadRecords();
+        populateTeams();
+        statusElement.textContent = `${state.records.length} total entries`;
+        render();
+    } catch (loadError) {
+        error.textContent = `Unable to load event records: ${loadError instanceof Error ? loadError.message : String(loadError)}`;
+        error.hidden = false;
+        statusElement.textContent = "Unable to load event records";
+    }
+}
+
 searchInput.addEventListener("input", (event) => {
     state.query = (event.target as HTMLInputElement).value.trim();
     renderPreservingScroll();
+});
+eventFilter.addEventListener("change", (event) => {
+    const nextEventId = (event.target as HTMLSelectElement).value;
+    if (nextEventId === state.eventId) return;
+    const nextEvent = events.find((item) => item.id === nextEventId);
+    if (!nextEvent) return;
+    const confirmed = window.confirm(`Switch to ${nextEvent.label}? Attendance is tracked separately for each event.`);
+    if (!confirmed) {
+        eventFilter.value = state.eventId;
+        return;
+    }
+    void switchEvent(nextEventId);
 });
 clearButton.addEventListener("click", () => {
     searchInput.value = "";
@@ -552,16 +626,15 @@ resetButton.addEventListener("click", () => {
     render();
 });
 
-statusElement.textContent = "Loading records...";
-loadRecords()
+statusElement.textContent = "Loading events...";
+populateDivisions();
+loadEvents()
     .then(() => {
-        populateTeams();
-        populateDivisions();
-        statusElement.textContent = `${state.records.length} total entries`;
-        render();
+        populateEvents();
+        return switchEvent(state.eventId);
     })
     .catch((loadError) => {
-        error.textContent = `Unable to load records: ${loadError.message}`;
+        error.textContent = `Unable to load events: ${loadError instanceof Error ? loadError.message : String(loadError)}`;
         error.hidden = false;
-        statusElement.textContent = "Unable to load records";
+        statusElement.textContent = "Unable to load events";
     });
