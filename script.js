@@ -280,6 +280,14 @@ function render() {
     updateToggleTeamsButton();
 }
 
+function renderPreservingScroll() {
+    const scrollPosition = window.scrollY;
+    render();
+    requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollPosition, left: 0, behavior: "instant" });
+    });
+}
+
 function populateTeams() {
     [...new Set(state.records.map((record) => record.team).filter(Boolean))]
         .sort()
@@ -358,7 +366,7 @@ results.addEventListener("click", (event) => {
             .filter((record) => record.team === teamButton.dataset.team)
             .forEach((record) => { state.attendance[attendanceKey(record)] = teamButton.dataset.teamStatus; });
         saveAttendance();
-        render();
+        renderPreservingScroll();
         return;
     }
     const button = event.target.closest("[data-status]");
@@ -368,7 +376,7 @@ results.addEventListener("click", (event) => {
     if (!record) return;
     state.attendance[attendanceKey(record)] = button.dataset.status;
     saveAttendance();
-    render();
+    renderPreservingScroll();
 });
 resetButton.addEventListener("click", () => {
     state.records.forEach((record) => { delete state.attendance[attendanceKey(record)]; });
