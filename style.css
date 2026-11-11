@@ -347,13 +347,15 @@ mark {
     position: relative;
     isolation: isolate;
     overflow: visible;
-    background: var(--team-gradient, var(--surface));
+    background: var(--surface);
     outline-width: 1px;
     outline-style: solid;
     outline-color: var(--line);
     outline-offset: -1px;
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    background-size: var(--team-gradient-width, 100%) 100%;
+    background-position: left top;
 }
 
 .team-group::before {
@@ -412,8 +414,10 @@ mark {
     cursor: pointer;
     transition: border-radius 220ms ease;
     box-sizing: border-box;
-    background: var(--team-gradient, var(--surface));
+    background: transparent;
     isolation: isolate;
+    background-size: var(--team-gradient-width, 100%) 100%;
+    background-position: left top;
 }
 
 .team-heading::before {
@@ -422,14 +426,13 @@ mark {
     content: "";
     inset: 0;
     background: var(--team-gradient, var(--surface));
-    border-width: 1px 1px 0 1px;
-    border-color: var(--line);
-    border-style: solid;
     border-radius: inherit;
-    width: 100%;
+    width: calc(100% + 1.666667px);
     height: 100%;
-    left: -1px;
-    top: -1px;
+    left: -0.833333px;
+    top: 0;
+    background-size: var(--team-gradient-width, 100%) 100%;
+    background-position: left top;
 }
 
 .team-heading::after {
@@ -526,6 +529,8 @@ mark {
 .team-members-wrapper {
     position: relative;
     isolation: isolate;
+    background-size: var(--team-gradient-width, 100%) 100%;
+    background-position: left top;
 
     &::after {
         position: absolute;
@@ -539,6 +544,8 @@ mark {
         height: calc(100% + 16px);
         outline: 1px solid var(--line);
         outline-offset: -1px;
+        background-size: var(--team-gradient-width, 100%) 100%;
+        background-position: left top;
     }
 }
 
@@ -550,8 +557,10 @@ mark {
     transition:
         max-height 260ms ease,
         opacity 260ms ease;
-    background: var(--team-gradient, var(--surface));
+    background: transparent;
     border-radius: 0 0 16px 16px;
+    background-size: var(--team-gradient-width, 100%) 100%;
+    background-position: left top;
 }
 
 .team-members-content {

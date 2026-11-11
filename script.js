@@ -145,7 +145,7 @@ async function loadRecords() {
     state.records = parseCSV(await response.text());
 }
 
-function getTeamGradient(records) {
+function getTeamGradient(records, width = null) {
     const colors = {
         unprocessed: "#26334e",
         present: "#145c3d",
@@ -160,11 +160,23 @@ function getTeamGradient(records) {
     statuses.forEach((status) => {
         const percentage = records.filter((record) => getAttendanceStatus(record) === status).length / total * 100;
         if (percentage === 0) return;
-        stops.push(`${colors[status]} ${position}%`, `${colors[status]} ${position + percentage}%`);
+        const start = width === null ? `${position}%` : `${position / 100 * width}px`;
+        const end = width === null ? `${position + percentage}%` : `${(position + percentage) / 100 * width}px`;
+        stops.push(`${colors[status]} ${start}`, `${colors[status]} ${end}`);
         position += percentage;
     });
 
     return `linear-gradient(90deg in oklab, ${stops.join(", ")})`;
+}
+
+function updateAbsoluteTeamGradients() {
+    results.querySelectorAll(".team-group").forEach((group) => {
+        const width = group.getBoundingClientRect().width;
+        const teamCode = group.querySelector(".team-code")?.textContent;
+        const teamRecords = state.records.filter((record) => record.teamCode === teamCode);
+        group.style.setProperty("--team-gradient", getTeamGradient(teamRecords, width));
+        group.style.setProperty("--team-gradient-width", `${width}px`);
+    });
 }
 
 function createStatusButtons(record, currentStatus) {
@@ -345,6 +357,7 @@ function render() {
         });
     });
     updateToggleTeamsButton();
+    updateAbsoluteTeamGradients();
     updateStickyOffsets();
 }
 
