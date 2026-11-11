@@ -46,6 +46,28 @@ function display(value) {
     return value || "-";
 }
 
+function getTeamGradient(records) {
+    const colors = {
+        unprocessed: "#26334e",
+        present: "#145c3d",
+        absent: "#702b32",
+        flagged: "#73500d",
+    };
+    const statuses = ["unprocessed", "present", "absent", "flagged"];
+    const total = records.length;
+    let position = 0;
+    const stops = [];
+
+    statuses.forEach((status) => {
+        const percentage = records.filter((record) => getAttendanceStatus(record) === status).length / total * 100;
+        if (percentage === 0) return;
+        stops.push(`${colors[status]} ${position}%`, `${colors[status]} ${position + percentage}%`);
+        position += percentage;
+    });
+
+    return `linear-gradient(90deg in oklab, ${stops.join(", ")})`;
+}
+
 function createStatusButtons(record, currentStatus) {
     const controls = statusButtonTemplate.content.firstElementChild.cloneNode(true);
     const labels = {
@@ -74,13 +96,16 @@ function render() {
     const filtered = state.statusFilter ? state.records.filter((record) => matchingTeams.has(record.team)) : searchFiltered;
     const presentCount = state.records.filter((record) => getAttendanceStatus(record) === "present").length;
     const absentCount = state.records.filter((record) => getAttendanceStatus(record) === "absent").length;
+    const flaggedCount = state.records.filter((record) => getAttendanceStatus(record) === "flagged").length;
 
     resultCount.replaceChildren();
     const present = document.createElement("strong");
     present.textContent = presentCount;
     const absent = document.createElement("strong");
     absent.textContent = absentCount;
-    resultCount.append(present, " present · ", absent, " absent");
+    const flagged = document.createElement("strong");
+    flagged.textContent = flaggedCount;
+    resultCount.append(present, " present · ", absent, " absent  · ", flagged, " flagged");
     clearButton.classList.toggle("visible", Boolean(state.query));
     status.textContent = `${filtered.length} shown${state.statusFilter ? " · full teams displayed" : ""}`;
     results.replaceChildren();
@@ -96,6 +121,8 @@ function render() {
     }, {});
     Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).forEach(([team, records]) => {
         const group = teamTemplate.content.firstElementChild.cloneNode(true);
+        const teamRecords = state.records.filter((record) => record.team === team);
+        group.style.setProperty("--team-gradient", getTeamGradient(teamRecords));
         group.querySelector(".team-name").textContent = display(records[0].teamName);
         group.querySelector(".team-code").textContent = display(team);
         group.querySelector(".team-total").textContent = `${records.length} ${records.length === 1 ? "person" : "people"}`;

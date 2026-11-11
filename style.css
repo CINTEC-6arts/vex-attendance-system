@@ -230,10 +230,23 @@ select:focus {
 }
 
 .team-group {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.team-group::before {
+    position: absolute;
+    z-index: -1;
+    content: "";
+    inset: -10px;
+    background: var(--team-gradient, var(--surface));
+    filter: blur(7px);
+    opacity: .9;
 }
 
 .team-heading {
@@ -249,9 +262,8 @@ select:focus {
     font-size: 18px;
 }
 
-.team-code {
+.team-name {
     margin-left: 6px;
-    color: var(--muted);
     font-size: 12px;
     font-weight: 500;
 }
