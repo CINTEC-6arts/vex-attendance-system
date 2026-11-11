@@ -1,7 +1,7 @@
 const state = {
     records: [],
     query: "",
-    team: "",
+    teamCode: "",
     statusFilter: "",
     attendance: JSON.parse(localStorage.getItem("attendance-status") || "{}"),
 };
@@ -32,7 +32,7 @@ const todayKey = today.toISOString().slice(0, 10);
 dateLabel.textContent = today.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 
 function attendanceKey(record) {
-    return `${todayKey}:${record.team}:${record.name}`;
+    return `${todayKey}:${record.teamCode}:${record.name}`;
 }
 
 function getAttendanceStatus(record) {
@@ -81,16 +81,16 @@ function parseCSV(text) {
     if (rows.length < 2) throw new Error("CSV does not contain any records.");
 
     const headers = rows[0].map((header) => header.toLowerCase());
-    const requiredHeaders = ["team", "team_name", "name", "dob", "school", "image"];
+    const requiredHeaders = ["team_code", "organisation", "name", "dob", "school", "image"];
     const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
     if (missingHeaders.length) throw new Error(`CSV is missing columns: ${missingHeaders.join(", ")}.`);
 
     return rows.slice(1).map((cells, rowIndex) => {
         const record = Object.fromEntries(headers.map((header, index) => [header, cells[index] || ""]));
-        if (!record.team || !record.name) throw new Error(`CSV row ${rowIndex + 2} is missing a team or name.`);
+        if (!record.team_code || !record.name) throw new Error(`CSV row ${rowIndex + 2} is missing a team or name.`);
         return {
-            team: record.team,
-            teamName: record.team_name,
+            teamCode: record.team_code,
+            organisation: record.organisation,
             name: record.name,
             dob: record.dob,
             school: record.school,
@@ -140,7 +140,7 @@ function createStatusButtons(record, currentStatus) {
         button.classList.toggle("selected", currentStatus === value);
         button.title = labels[value];
         button.setAttribute("aria-label", labels[value]);
-        button.dataset.attendance = `${record.team}:${record.name}`;
+        button.dataset.attendance = `${record.teamCode}:${record.name}`;
     });
     return controls;
 }
@@ -200,23 +200,23 @@ function render() {
 
     const query = state.query.toLowerCase();
     const searchFiltered = state.records.filter((record) => {
-        const matchesQuery = !query || [record.team, record.teamName, record.name]
+        const matchesQuery = !query || [record.teamCode, record.organisation, record.name]
             .some((value) => value.toLowerCase().includes(query));
-        return matchesQuery && (!state.team || record.team === state.team);
+        return matchesQuery && (!state.teamCode || record.teamCode === state.teamCode);
     });
-    const matchingTeams = new Set(searchFiltered.filter((record) => !state.statusFilter || getAttendanceStatus(record) === state.statusFilter).map((record) => record.team));
-    const filtered = state.statusFilter ? state.records.filter((record) => matchingTeams.has(record.team)) : searchFiltered;
-    const filteredTeams = new Set(filtered.map((record) => record.team));
+    const matchingTeams = new Set(searchFiltered.filter((record) => !state.statusFilter || getAttendanceStatus(record) === state.statusFilter).map((record) => record.teamCode));
+    const filtered = state.statusFilter ? state.records.filter((record) => matchingTeams.has(record.teamCode)) : searchFiltered;
+    const filteredTeams = new Set(filtered.map((record) => record.teamCode));
 
     resultCount.replaceChildren();
     const takenAttendanceTeamCount = document.createElement("strong");
-    takenAttendanceTeamCount.textContent = [...new Set(state.records.filter((record) => getAttendanceStatus(record) !== "unprocessed").map((record) => record.team))].length;
+    takenAttendanceTeamCount.textContent = [...new Set(state.records.filter((record) => getAttendanceStatus(record) !== "unprocessed").map((record) => record.teamCode))].length;
     const totalTeamCount = document.createElement("strong");
-    totalTeamCount.textContent = [...new Set(state.records.map((record) => record.team))].length;
+    totalTeamCount.textContent = [...new Set(state.records.map((record) => record.teamCode))].length;
     const teamStatuses = state.records.reduce((teams, record) => {
-        const team = teams.get(record.team) || new Set();
+        const team = teams.get(record.teamCode) || new Set();
         team.add(getAttendanceStatus(record));
-        teams.set(record.team, team);
+        teams.set(record.teamCode, team);
         return teams;
     }, new Map());
     // A team with at least one present member is counted as present.
@@ -240,15 +240,15 @@ function render() {
     }
 
     const groups = filtered.reduce((teams, record) => {
-        if (!filteredTeams.has(record.team)) return teams;
-        (teams[record.team] ||= []).push(record);
+        if (!filteredTeams.has(record.teamCode)) return teams;
+        (teams[record.teamCode] ||= []).push(record);
         return teams;
     }, {});
     Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).forEach(([team, records]) => {
         const group = teamTemplate.content.firstElementChild.cloneNode(true);
-        const teamRecords = state.records.filter((record) => record.team === team);
+        const teamRecords = state.records.filter((record) => record.teamCode === team);
         group.style.setProperty("--team-gradient", getTeamGradient(teamRecords));
-        group.querySelector(".team-name").textContent = display(records[0].teamName);
+        group.querySelector(".organisation").textContent = display(records[0].organisation);
         group.querySelector(".team-code").textContent = display(team);
         group.querySelector(".team-total").textContent = `${records.length} ${records.length === 1 ? "person" : "people"}`;
         group.querySelectorAll("[data-team-status]").forEach((button) => { button.dataset.team = team; });
@@ -303,7 +303,7 @@ function renderPreservingScroll() {
 }
 
 function populateTeams() {
-    [...new Set(state.records.map((record) => record.team).filter(Boolean))]
+    [...new Set(state.records.map((record) => record.teamCode).filter(Boolean))]
         .sort()
         .forEach((team) => {
             const option = teamOptionTemplate.content.firstElementChild.cloneNode(true);
@@ -324,7 +324,7 @@ clearButton.addEventListener("click", () => {
     render();
 });
 teamFilter.addEventListener("change", (event) => {
-    state.team = event.target.value;
+    state.teamCode = event.target.value;
     render();
 });
 statusFilter.addEventListener("change", (event) => {
@@ -336,7 +336,7 @@ clearFiltersButton.addEventListener("click", () => {
     teamFilter.value = "";
     statusFilter.value = "";
     state.query = "";
-    state.team = "";
+    state.teamCode = "";
     state.statusFilter = "";
     render();
 });
@@ -377,7 +377,7 @@ results.addEventListener("click", (event) => {
     const teamButton = event.target.closest("[data-team-status]");
     if (teamButton) {
         state.records
-            .filter((record) => record.team === teamButton.dataset.team)
+            .filter((record) => record.teamCode === teamButton.dataset.team)
             .forEach((record) => { state.attendance[attendanceKey(record)] = teamButton.dataset.teamStatus; });
         saveAttendance();
         renderPreservingScroll();
@@ -386,7 +386,7 @@ results.addEventListener("click", (event) => {
     const button = event.target.closest("[data-status]");
     if (!button) return;
     const [team, name] = button.dataset.attendance.split(":");
-    const record = state.records.find((item) => item.team === team && item.name === name);
+    const record = state.records.find((item) => item.teamCode === team && item.name === name);
     if (!record) return;
     state.attendance[attendanceKey(record)] = button.dataset.status;
     saveAttendance();
