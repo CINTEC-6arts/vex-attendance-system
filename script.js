@@ -213,17 +213,6 @@ function updateToggleTeamsButton() {
 }
 
 function render() {
-    results.querySelectorAll(".team-group").forEach((group) => {
-        const team = group.querySelector(".team-code")?.textContent;
-        const expanded = group.querySelector(".team-heading")?.getAttribute("aria-expanded") === "true";
-        if (!team) return;
-        if (expanded) {
-            expandedTeams.add(team);
-        } else {
-            expandedTeams.delete(team);
-        }
-    });
-
     const query = state.query.toLowerCase();
     const searchFiltered = state.records.filter((record) => {
         const matchesQuery = !query || [record.teamCode, record.organisation, record.name]
@@ -321,14 +310,16 @@ function render() {
             membersContent.append(person);
         });
         organisationTeams.append(group);
-        if (isExpanded) {
+        });
+        results.append(organisationGroup);
+        organisationGroup.querySelectorAll(".team-group").forEach((group) => {
+            if (group.classList.contains("collapsed")) return;
+            const members = group.querySelector(".team-members");
             members.style.transition = "none";
             members.style.maxHeight = `${members.scrollHeight}px`;
             void members.offsetHeight;
             requestAnimationFrame(() => { members.style.transition = ""; });
-        }
         });
-        results.append(organisationGroup);
     });
     updateToggleTeamsButton();
 }
