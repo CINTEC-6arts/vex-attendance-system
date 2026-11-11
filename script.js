@@ -29,7 +29,7 @@ const teamAnimationDuration = 260;
 
 const today = new Date();
 const todayKey = today.toISOString().slice(0, 10);
-dateLabel.textContent = today.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+dateLabel.textContent = today.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 
 function attendanceKey(record) {
     return `${todayKey}:${record.team}:${record.name}`;
