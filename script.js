@@ -393,6 +393,7 @@ results.addEventListener("click", (event) => {
     renderPreservingScroll();
 });
 resetButton.addEventListener("click", () => {
+    if (!window.confirm("Delete all saved attendance data for today? This cannot be undone.")) return;
     state.records.forEach((record) => { delete state.attendance[attendanceKey(record)]; });
     saveAttendance();
     render();
