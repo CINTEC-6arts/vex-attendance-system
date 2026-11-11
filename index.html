@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Identity Directory</title>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <main class="shell">
+            <p class="eyebrow">Attendance</p>
+            <h1>Take attendance</h1>
+            <p class="intro">Find a person by team or name, then mark them present or absent.</p>
+
+            <section class="search-panel" aria-label="Attendance search">
+                <div class="search-wrap">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <path d="m20 20-4-4"></path>
+                    </svg>
+                    <input id="search" type="search" placeholder="Search by team or name..." autocomplete="off" aria-label="Search by team or name" />
+                    <button id="clear" class="clear-button" type="button" aria-label="Clear search">x</button>
+                </div>
+                <select id="team-filter" aria-label="Filter by team">
+                    <option value="">All teams</option>
+                </select>
+                <select id="status-filter" aria-label="Filter by attendance status">
+                    <option value="">All statuses</option>
+                    <option value="unprocessed">Unprocessed</option>
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="flagged">Flagged for problem</option>
+                </select>
+                <button id="clear-filters" class="clear-filters" type="button">Clear filters</button>
+            </section>
+
+            <section class="attendance-bar" aria-label="Attendance controls">
+                <p class="attendance-date"><strong id="attendance-date"></strong><span>Attendance session</span></p>
+                <div class="actions">
+                    <button id="reset-attendance" class="action-button secondary" type="button">Reset session</button>
+                </div>
+            </section>
+
+            <div class="toolbar">
+                <p id="result-count" class="result-count"></p>
+                <span id="status" class="status"></span>
+            </div>
+            <section id="results" class="results" aria-live="polite"></section>
+            <p id="error" class="error" hidden></p>
+        </main>
+
+        <template id="team-template">
+            <section class="team-group">
+                <div class="team-heading">
+                    <div class="team-heading-content">
+                        <h2 class="team-name"></h2>
+                        <span class="team-code"></span>
+                        <span class="team-total"></span>
+                    </div>
+                    <div class="team-actions" aria-label="Set attendance for entire team">
+                        <button class="team-action present" type="button" title="Confirm entire team present" aria-label="Confirm entire team present" data-team-status="present">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 4 4L19 6"></path></svg>
+                        </button>
+                        <button class="team-action absent" type="button" title="Confirm entire team absent" aria-label="Confirm entire team absent" data-team-status="absent">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m7 7 10 10M17 7 7 17"></path></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="team-members"></div>
+            </section>
+        </template>
+        <template id="person-template">
+            <article class="person-row">
+                <img class="person-image" alt="" />
+                <span class="person-info">
+                    <span class="person-name"></span>
+                    <span class="person-meta"></span>
+                    <span class="status-placeholder"></span>
+                </span>
+            </article>
+        </template>
+        <template id="status-button-template">
+            <span class="status-controls" aria-label="Attendance status">
+                <button class="status-button" type="button" data-status="unprocessed">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l2.5 2"></path></svg>
+                </button>
+                <button class="status-button" type="button" data-status="present">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 4 4L19 6"></path></svg>
+                </button>
+                <button class="status-button" type="button" data-status="absent">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m7 7 10 10M17 7 7 17"></path></svg>
+                </button>
+                <button class="status-button" type="button" data-status="flagged">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 21V4m0 1h11l-2 4 2 4H6"></path></svg>
+                </button>
+            </span>
+        </template>
+        <template id="empty-template">
+            <div class="empty">
+                <h2>No matches found</h2>
+                <p>Try a different team or name.</p>
+            </div>
+        </template>
+        <template id="team-option-template">
+            <option></option>
+        </template>
+
+        <script src="script.js" defer></script>
+    </body>
+</html>
