@@ -4,6 +4,9 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Identity Directory</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..700,0..1,0" rel="stylesheet" />
         <link rel="stylesheet" href="style.css" />
     </head>
     <body>
@@ -12,12 +15,15 @@
             <h1>Take attendance</h1>
             <p class="intro">Find a person by team or name, then mark them present or absent.</p>
 
-            <section class="search-panel" aria-label="Attendance search">
+            <section class="control-toolbar" aria-label="Attendance search and controls">
+                <p class="attendance-date"><strong id="attendance-date"></strong><span>Attendance session</span></p>
+                <div class="actions">
+                    <button id="reset-attendance" class="action-button secondary icon-action" type="button" aria-label="Reset session" title="Reset session">
+                        <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                </div>
                 <div class="search-wrap">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <circle cx="11" cy="11" r="7"></circle>
-                        <path d="m20 20-4-4"></path>
-                    </svg>
+                    <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
                     <input id="search" type="search" placeholder="Search by team or name..." autocomplete="off" aria-label="Search by team or name" />
                     <button id="clear" class="clear-button" type="button" aria-label="Clear search">x</button>
                 </div>
@@ -29,16 +35,11 @@
                     <option value="unprocessed">Unprocessed</option>
                     <option value="present">Present</option>
                     <option value="absent">Absent</option>
-                    <option value="flagged">Flagged for problem</option>
+                    <option value="flagged">Flagged</option>
                 </select>
-                <button id="clear-filters" class="clear-filters" type="button">Clear filters</button>
-            </section>
-
-            <section class="attendance-bar" aria-label="Attendance controls">
-                <p class="attendance-date"><strong id="attendance-date"></strong><span>Attendance session</span></p>
-                <div class="actions">
-                    <button id="reset-attendance" class="action-button secondary" type="button">Reset session</button>
-                </div>
+                <button id="clear-filters" class="clear-filters icon-action" type="button" aria-label="Clear filters" title="Clear filters">
+                    <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
+                </button>
             </section>
 
             <div class="toolbar">
@@ -59,10 +60,10 @@
                     </div>
                     <div class="team-actions" aria-label="Set attendance for entire team">
                         <button class="team-action present" type="button" title="Confirm entire team present" aria-label="Confirm entire team present" data-team-status="present">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 4 4L19 6"></path></svg>
+                            <span class="material-symbols-outlined" aria-hidden="true">check</span>
                         </button>
                         <button class="team-action absent" type="button" title="Confirm entire team absent" aria-label="Confirm entire team absent" data-team-status="absent">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m7 7 10 10M17 7 7 17"></path></svg>
+                            <span class="material-symbols-outlined" aria-hidden="true">close</span>
                         </button>
                     </div>
                 </div>
@@ -82,16 +83,16 @@
         <template id="status-button-template">
             <span class="status-controls" aria-label="Attendance status">
                 <button class="status-button" type="button" data-status="unprocessed">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l2.5 2"></path></svg>
+                    <span class="material-symbols-outlined" aria-hidden="true">question_mark</span>
                 </button>
                 <button class="status-button" type="button" data-status="present">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 4 4L19 6"></path></svg>
+                    <span class="material-symbols-outlined" aria-hidden="true">check</span>
                 </button>
                 <button class="status-button" type="button" data-status="absent">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m7 7 10 10M17 7 7 17"></path></svg>
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
                 </button>
                 <button class="status-button" type="button" data-status="flagged">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 21V4m0 1h11l-2 4 2 4H6"></path></svg>
+                    <span class="material-symbols-outlined" aria-hidden="true">flag</span>
                 </button>
             </span>
         </template>

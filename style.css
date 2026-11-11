@@ -51,10 +51,14 @@ h1 {
     font-size: 17px;
 }
 
-.search-panel {
+.control-toolbar {
     display: flex;
     gap: 12px;
     align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin: 0 -12px 24px;
     padding: 12px;
     background: var(--surface);
     border: 1px solid var(--line);
@@ -124,14 +128,34 @@ select:focus {
 }
 
 .clear-filters {
-    padding: 13px 14px;
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
     border: 1px solid var(--line);
     border-radius: 11px;
     background: #2a3650;
     color: var(--ink);
-    font: inherit;
     white-space: nowrap;
     cursor: pointer;
+}
+
+.material-symbols-outlined {
+    font-size: 20px;
+    line-height: 1;
+    user-select: none;
+    font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+
+.status-button.selected .material-symbols-outlined,
+.team-action:active .material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 600, "GRAD" 0, "opsz" 24;
+}
+
+.icon-action .material-symbols-outlined {
+    width: 18px;
+    font-size: 18px;
 }
 
 .clear-filters:hover,
@@ -141,20 +165,9 @@ select:focus {
     outline-offset: 1px;
 }
 
-.attendance-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin: 24px 0 12px;
-    padding: 16px 18px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-}
-
 .attendance-date {
-    margin: 0;
+    min-width: 150px;
+    margin: 0 0 0 4px;
     color: var(--muted);
     font-size: 13px;
 }
@@ -168,6 +181,7 @@ select:focus {
 .actions {
     display: flex;
     gap: 8px;
+    margin-left: auto;
 }
 
 .action-button {
@@ -179,7 +193,11 @@ select:focus {
 }
 
 .action-button.secondary {
-    padding: 10px 13px;
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
     background: #2a3650;
     color: var(--ink);
 }
@@ -278,9 +296,8 @@ select:focus {
     color: #c62828;
 }
 
-.team-action svg {
-    width: 16px;
-    height: 16px;
+.team-action .material-symbols-outlined {
+    font-size: 18px;
 }
 
 .team-total {
@@ -351,9 +368,8 @@ select:focus {
     cursor: pointer;
 }
 
-.status-button svg {
-    width: 18px;
-    height: 18px;
+.status-button .material-symbols-outlined {
+    font-size: 18px;
 }
 
 .status-button:hover,
@@ -387,21 +403,21 @@ select:focus {
 }
 
 .person-row.present {
-    background: #c9f5d9;
-    border-color: #43b86f;
-    box-shadow: 0 6px 20px rgba(8, 127, 69, 0.16);
+    background: #145c3d;
+    border-color: #34d17d;
+    box-shadow: 0 8px 24px rgba(18, 209, 113, 0.28);
 }
 
 .person-row.absent {
-    background: #ffd5d1;
-    border-color: #e56b62;
-    box-shadow: 0 6px 20px rgba(198, 40, 40, 0.14);
+    background: #702b32;
+    border-color: #ff6b73;
+    box-shadow: 0 8px 24px rgba(255, 75, 87, 0.28);
 }
 
 .person-row.flagged {
-    background: #ffedaa;
-    border-color: #dfa900;
-    box-shadow: 0 6px 20px rgba(194, 124, 0, 0.14);
+    background: #73500d;
+    border-color: #ffc83d;
+    box-shadow: 0 8px 24px rgba(255, 190, 32, 0.28);
 }
 
 .person-row.present .person-name,
@@ -410,7 +426,7 @@ select:focus {
 .person-row.absent .person-meta,
 .person-row.flagged .person-name,
 .person-row.flagged .person-meta {
-    color: #172033;
+    color: #fff;
 }
 
 .empty {
@@ -442,8 +458,9 @@ select:focus {
         padding: 32px 16px 48px;
     }
 
-    .search-panel {
+    .control-toolbar {
         display: block;
+        margin: 0 0 20px;
     }
 
     select {
@@ -452,11 +469,11 @@ select:focus {
     }
 
     .clear-filters {
-        width: 100%;
+        width: 42px;
         margin-top: 10px;
     }
 
-    .attendance-bar,
+    .control-toolbar,
     .toolbar {
         align-items: flex-start;
         flex-direction: column;
