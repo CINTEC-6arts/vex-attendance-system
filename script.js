@@ -1,32 +1,5 @@
 const state = {
-    records: [
-        { team: "1234A", teamName: "team1", name: "apple", dob: "jan2026", school: "CUHK", image: "file1.png" },
-        { team: "1234A", teamName: "team1", name: "avacado", dob: "jan2026", school: "CUHK", image: "file1.png" },
-        { team: "4567B", teamName: "team2", name: "banana", dob: "feb2025", school: "HKU", image: "file2.png" },
-        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8911C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8920C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8A10C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8940C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8950C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "890SA", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8960AC", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8960C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8960C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "89AS0C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "89610C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "89620C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "891140C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "123960C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
-    ],
+    records: [],
     query: "",
     team: "",
     statusFilter: "",
@@ -41,6 +14,7 @@ const controlToolbar = document.querySelector(".control-toolbar");
 const results = document.querySelector("#results");
 const resultCount = document.querySelector("#result-count");
 const status = document.querySelector("#status");
+const error = document.querySelector("#error");
 const dateLabel = document.querySelector("#attendance-date");
 const resetButton = document.querySelector("#reset-attendance");
 const toggleTeamsButton = document.querySelector("#toggle-teams");
@@ -71,6 +45,64 @@ function saveAttendance() {
 
 function display(value) {
     return value || "-";
+}
+
+function parseCSV(text) {
+    const rows = [];
+    let row = [];
+    let value = "";
+    let quoted = false;
+
+    for (let index = 0; index < text.length; index += 1) {
+        const character = text[index];
+        const nextCharacter = text[index + 1];
+        if (character === '"' && quoted && nextCharacter === '"') {
+            value += '"';
+            index += 1;
+        } else if (character === '"') {
+            quoted = !quoted;
+        } else if (character === "," && !quoted) {
+            row.push(value.trim());
+            value = "";
+        } else if ((character === "\n" || character === "\r") && !quoted) {
+            if (character === "\r" && nextCharacter === "\n") index += 1;
+            row.push(value.trim());
+            if (row.some(Boolean)) rows.push(row);
+            row = [];
+            value = "";
+        } else {
+            value += character;
+        }
+    }
+
+    row.push(value.trim());
+    if (row.some(Boolean)) rows.push(row);
+    if (quoted) throw new Error("CSV contains an unclosed quoted field.");
+    if (rows.length < 2) throw new Error("CSV does not contain any records.");
+
+    const headers = rows[0].map((header) => header.toLowerCase());
+    const requiredHeaders = ["team", "team_name", "name", "dob", "school", "image"];
+    const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
+    if (missingHeaders.length) throw new Error(`CSV is missing columns: ${missingHeaders.join(", ")}.`);
+
+    return rows.slice(1).map((cells, rowIndex) => {
+        const record = Object.fromEntries(headers.map((header, index) => [header, cells[index] || ""]));
+        if (!record.team || !record.name) throw new Error(`CSV row ${rowIndex + 2} is missing a team or name.`);
+        return {
+            team: record.team,
+            teamName: record.team_name,
+            name: record.name,
+            dob: record.dob,
+            school: record.school,
+            image: record.image,
+        };
+    });
+}
+
+async function loadRecords() {
+    const response = await fetch("data.csv");
+    if (!response.ok) throw new Error(`Could not load data.csv (${response.status} ${response.statusText}).`);
+    state.records = parseCSV(await response.text());
 }
 
 function getTeamGradient(records) {
@@ -344,6 +376,15 @@ resetButton.addEventListener("click", () => {
     render();
 });
 
-populateTeams();
-status.textContent = `${state.records.length} total entries`;
-render();
+status.textContent = "Loading records...";
+loadRecords()
+    .then(() => {
+        populateTeams();
+        status.textContent = `${state.records.length} total entries`;
+        render();
+    })
+    .catch((loadError) => {
+        error.textContent = `Unable to load records: ${loadError.message}`;
+        error.hidden = false;
+        status.textContent = "Unable to load records";
+    });

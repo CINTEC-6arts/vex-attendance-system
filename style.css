@@ -430,8 +430,27 @@ select:focus {
 
 .status-button:hover,
 .status-button:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
+    border-color: currentColor;
+}
+
+.status-button[data-status="present"]:hover,
+.status-button[data-status="present"]:focus-visible {
+    color: #087f45;
+}
+
+.status-button[data-status="absent"]:hover,
+.status-button[data-status="absent"]:focus-visible {
+    color: #c62828;
+}
+
+.status-button[data-status="flagged"]:hover,
+.status-button[data-status="flagged"]:focus-visible {
+    color: #ffc83d;
+}
+
+.status-button[data-status="unprocessed"]:hover,
+.status-button[data-status="unprocessed"]:focus-visible {
+    color: var(--accent);
 }
 
 .status-button[data-status="unprocessed"].selected {
