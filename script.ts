@@ -214,8 +214,8 @@ function getTeamGradient(records: RecordEntry[], width: number | null = null): s
 function updateAbsoluteTeamGradients(): void {
     results.querySelectorAll(".team-group").forEach((group) => {
         const width = group.getBoundingClientRect().width;
-        const teamCode = group.querySelector(".team-code")?.textContent;
-        const teamRecords = state.records.filter((record) => record.teamCode === teamCode);
+        const [teamCode, division] = (group as HTMLElement).dataset.teamKey?.split("|") || [];
+        const teamRecords = state.records.filter((record) => record.teamCode === teamCode && record.division === division);
         (group as HTMLElement).style.setProperty("--team-gradient", getTeamGradient(teamRecords, width));
         (group as HTMLElement).style.setProperty("--team-gradient-width", `${width}px`);
     });
