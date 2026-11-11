@@ -112,7 +112,7 @@ function getTeamGradient(records) {
         absent: "#702b32",
         flagged: "#73500d",
     };
-    const statuses = ["unprocessed", "present", "absent", "flagged"];
+    const statuses = ["present", "absent", "flagged", "unprocessed"];
     const total = records.length;
     let position = 0;
     const stops = [];
