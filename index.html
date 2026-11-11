@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Identity Directory</title>
+        <title>VEX Attendance System</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..700,0..1,0" rel="stylesheet" />
@@ -13,49 +13,57 @@
         <main class="shell">
             <p class="eyebrow">Attendance</p>
             <h1>Take attendance</h1>
-            <p class="intro">Find a person by team or name, then mark them present or absent.</p>
+            <p class="intro">Find a person by team, division, or name, then mark them present or absent.</p>
 
-            <section class="control-toolbar" aria-label="Attendance search and controls">
-                <p class="attendance-date"><strong id="attendance-date"></strong><span>Attendance session</span></p>
-                <div class="actions">
-                    <button id="reset-attendance" class="action-button secondary icon-action" type="button" aria-label="Reset session" title="Reset session">
-                        <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+            <div class="control-toolbar-wrapper">
+                <section class="control-toolbar" aria-label="Attendance search and controls">
+                    <p class="attendance-date"><strong id="attendance-date"></strong><span>Attendance session</span></p>
+                    <div class="actions">
+                        <button id="reset-attendance" class="action-button secondary icon-action" type="button" aria-label="Reset session" title="Reset session">
+                            <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                        </button>
+                    </div>
+                    <div class="search-wrap">
+                        <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
+                        <input id="search" type="search" placeholder="Search by team, division, or name..." autocomplete="off" aria-label="Search by team, division, or name" />
+                        <button id="clear" class="clear-button" type="button" aria-label="Clear search">
+                            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                        </button>
+                    </div>
+                    <label class="select-wrap">
+                        <select id="team-filter" aria-label="Filter by team">
+                            <option value="">All teams</option>
+                        </select>
+                        <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
+                    </label>
+                    <label class="select-wrap">
+                        <select id="division-filter" aria-label="Filter by division">
+                            <option value="">All divisions</option>
+                        </select>
+                        <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
+                    </label>
+                    <label class="select-wrap">
+                        <select id="status-filter" aria-label="Filter by attendance status">
+                            <option value="">All statuses</option>
+                            <option value="unprocessed">Unprocessed</option>
+                            <option value="present">Present</option>
+                            <option value="absent">Absent</option>
+                            <option value="flagged">Flagged</option>
+                        </select>
+                        <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
+                    </label>
+                    <button id="clear-filters" class="clear-filters icon-action" type="button" aria-label="Clear filters" title="Clear filters">
+                        <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
                     </button>
-                </div>
-                <div class="search-wrap">
-                    <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
-                    <input id="search" type="search" placeholder="Search by team or name..." autocomplete="off" aria-label="Search by team or name" />
-                    <button id="clear" class="clear-button" type="button" aria-label="Clear search">
-                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                    <button id="toggle-teams" class="clear-filters icon-action" type="button" aria-label="Expand all teams" title="Expand all teams">
+                        <span id="toggle-teams-icon" class="material-symbols-outlined" aria-hidden="true">unfold_more</span>
                     </button>
-                </div>
-                <label class="select-wrap">
-                    <select id="team-filter" aria-label="Filter by team">
-                        <option value="">All teams</option>
-                    </select>
-                    <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
-                </label>
-                <label class="select-wrap">
-                    <select id="status-filter" aria-label="Filter by attendance status">
-                        <option value="">All statuses</option>
-                        <option value="unprocessed">Unprocessed</option>
-                        <option value="present">Present</option>
-                        <option value="absent">Absent</option>
-                        <option value="flagged">Flagged</option>
-                    </select>
-                    <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
-                </label>
-                <button id="clear-filters" class="clear-filters icon-action" type="button" aria-label="Clear filters" title="Clear filters">
-                    <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
-                </button>
-                <button id="toggle-teams" class="clear-filters icon-action" type="button" aria-label="Expand all teams" title="Expand all teams">
-                    <span id="toggle-teams-icon" class="material-symbols-outlined" aria-hidden="true">unfold_more</span>
-                </button>
-                <div class="toolbar">
-                    <p id="result-count" class="result-count"></p>
-                    <span id="status" class="status"></span>
-                </div>
-            </section>
+                    <div class="toolbar">
+                        <p id="result-count" class="result-count"></p>
+                        <span id="status" class="status"></span>
+                    </div>
+                </section>
+            </div>
 
             <section id="results" class="results" aria-live="polite"></section>
             <p id="error" class="error" hidden></p>
@@ -138,6 +146,6 @@
             <option></option>
         </template>
 
-        <script src="script.js" defer></script>
+        <script type="module" src="./script.ts"></script>
     </body>
 </html>
