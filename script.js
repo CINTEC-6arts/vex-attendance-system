@@ -4,6 +4,28 @@ const state = {
         { team: "1234A", teamName: "team1", name: "avacado", dob: "jan2026", school: "CUHK", image: "file1.png" },
         { team: "4567B", teamName: "team2", name: "banana", dob: "feb2025", school: "HKU", image: "file2.png" },
         { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8911C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8920C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8A10C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8940C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8950C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "890SA", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8960AC", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8960C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8960C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "89AS0C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "89610C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "89620C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "891140C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "123960C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
+        { team: "8910C", teamName: "team3", name: "cherry", dob: "mar2024", school: "PolyU", image: "file3.png" },
     ],
     query: "",
     team: "",
@@ -15,17 +37,21 @@ const clearButton = document.querySelector("#clear");
 const teamFilter = document.querySelector("#team-filter");
 const statusFilter = document.querySelector("#status-filter");
 const clearFiltersButton = document.querySelector("#clear-filters");
+const controlToolbar = document.querySelector(".control-toolbar");
 const results = document.querySelector("#results");
 const resultCount = document.querySelector("#result-count");
 const status = document.querySelector("#status");
 const dateLabel = document.querySelector("#attendance-date");
 const resetButton = document.querySelector("#reset-attendance");
+const toggleTeamsButton = document.querySelector("#toggle-teams");
+const toggleTeamsIcon = document.querySelector("#toggle-teams-icon");
 const teamTemplate = document.querySelector("#team-template");
 const personTemplate = document.querySelector("#person-template");
 const statusButtonTemplate = document.querySelector("#status-button-template");
 const emptyTemplate = document.querySelector("#empty-template");
 const teamOptionTemplate = document.querySelector("#team-option-template");
 const expandedTeams = new Set();
+const teamAnimationDuration = 260;
 
 const today = new Date();
 const todayKey = today.toISOString().slice(0, 10);
@@ -85,6 +111,47 @@ function createStatusButtons(record, currentStatus) {
         button.dataset.attendance = `${record.team}:${record.name}`;
     });
     return controls;
+}
+
+function setTeamExpanded(group, expanded, animate = true) {
+    const team = group.querySelector(".team-code").textContent;
+    const heading = group.querySelector(".team-heading");
+    const members = group.querySelector(".team-members");
+    const currentlyExpanded = !group.classList.contains("collapsed");
+
+    if (currentlyExpanded === expanded) return false;
+
+    group.classList.toggle("collapsed", !expanded);
+    heading.setAttribute("aria-expanded", String(expanded));
+    if (expanded) {
+        expandedTeams.add(team);
+    } else {
+        expandedTeams.delete(team);
+    }
+
+    if (!animate) {
+        members.style.maxHeight = expanded ? `${members.scrollHeight}px` : "0px";
+        return true;
+    }
+
+    if (expanded) {
+        members.style.maxHeight = "0px";
+        void members.offsetHeight;
+        requestAnimationFrame(() => { members.style.maxHeight = `${members.scrollHeight}px`; });
+    } else {
+        members.style.maxHeight = `${members.scrollHeight}px`;
+        void members.offsetHeight;
+        requestAnimationFrame(() => { members.style.maxHeight = "0px"; });
+    }
+    return true;
+}
+
+function updateToggleTeamsButton() {
+    const groups = [...results.querySelectorAll(".team-group")];
+    const allExpanded = groups.length > 0 && groups.every((group) => !group.classList.contains("collapsed"));
+    toggleTeamsIcon.textContent = allExpanded ? "unfold_less" : "unfold_more";
+    toggleTeamsButton.setAttribute("aria-label", allExpanded ? "Collapse all teams" : "Expand all teams");
+    toggleTeamsButton.title = allExpanded ? "Collapse all teams" : "Expand all teams";
 }
 
 function render() {
@@ -149,23 +216,8 @@ function render() {
         teamHeading.setAttribute("aria-expanded", String(isExpanded));
         teamHeading.addEventListener("click", (event) => {
             if (event.target.closest("[data-team-status]")) return;
-            const collapsed = group.classList.toggle("collapsed");
-            const expanded = !collapsed;
-            teamHeading.setAttribute("aria-expanded", String(expanded));
-            if (expanded) {
-                expandedTeams.add(team);
-            } else {
-                expandedTeams.delete(team);
-            }
-            if (collapsed) {
-                members.style.maxHeight = `${members.scrollHeight}px`;
-                void members.offsetHeight;
-                requestAnimationFrame(() => { members.style.maxHeight = "0px"; });
-            } else {
-                members.style.maxHeight = "0px";
-                void members.offsetHeight;
-                requestAnimationFrame(() => { members.style.maxHeight = `${members.scrollHeight}px`; });
-            }
+            setTeamExpanded(group, group.classList.contains("collapsed"));
+            updateToggleTeamsButton();
         });
         teamHeading.addEventListener("keydown", (event) => {
             if (event.target.closest("[data-team-status]")) return;
@@ -193,6 +245,7 @@ function render() {
             requestAnimationFrame(() => { members.style.transition = ""; });
         }
     });
+    updateToggleTeamsButton();
 }
 
 function populateTeams() {
@@ -232,6 +285,39 @@ clearFiltersButton.addEventListener("click", () => {
     state.team = "";
     state.statusFilter = "";
     render();
+});
+toggleTeamsButton.addEventListener("click", () => {
+    const groups = [...results.querySelectorAll(".team-group")];
+    if (!groups.length) return;
+
+    const allExpanded = groups.every((group) => !group.classList.contains("collapsed"));
+    const toolbarBottom = controlToolbar.getBoundingClientRect().bottom;
+    const anchor = groups.find((group) => {
+        const rect = group.getBoundingClientRect();
+        return rect.bottom > toolbarBottom && rect.top < window.innerHeight;
+    });
+    const anchorOffset = anchor
+        ? anchor.getBoundingClientRect().top - toolbarBottom
+        : 0;
+    const targetExpanded = !allExpanded;
+
+    groups.forEach((group) => { setTeamExpanded(group, targetExpanded); });
+    updateToggleTeamsButton();
+
+    if (!anchor) return;
+    const keepAnchor = () => {
+        const currentTop = anchor.getBoundingClientRect().top;
+        const currentToolbarBottom = controlToolbar.getBoundingClientRect().bottom;
+        window.scrollBy(0, currentTop - currentToolbarBottom - anchorOffset);
+    };
+    const start = performance.now();
+    const maintainAnchor = (now) => {
+        keepAnchor();
+        if (now - start < teamAnimationDuration) {
+            requestAnimationFrame(maintainAnchor);
+        }
+    };
+    requestAnimationFrame(maintainAnchor);
 });
 results.addEventListener("click", (event) => {
     const teamButton = event.target.closest("[data-team-status]");
