@@ -25,6 +25,7 @@ const personTemplate = document.querySelector("#person-template");
 const statusButtonTemplate = document.querySelector("#status-button-template");
 const emptyTemplate = document.querySelector("#empty-template");
 const teamOptionTemplate = document.querySelector("#team-option-template");
+const expandedTeams = new Set();
 
 const today = new Date();
 const todayKey = today.toISOString().slice(0, 10);
@@ -87,6 +88,17 @@ function createStatusButtons(record, currentStatus) {
 }
 
 function render() {
+    results.querySelectorAll(".team-group").forEach((group) => {
+        const team = group.querySelector(".team-code")?.textContent;
+        const expanded = group.querySelector(".team-heading")?.getAttribute("aria-expanded") === "true";
+        if (!team) return;
+        if (expanded) {
+            expandedTeams.add(team);
+        } else {
+            expandedTeams.delete(team);
+        }
+    });
+
     const query = state.query.toLowerCase();
     const searchFiltered = state.records.filter((record) => {
         const matchesQuery = !query || [record.team, record.name].some((value) => value.toLowerCase().includes(query));
@@ -127,8 +139,41 @@ function render() {
         group.querySelector(".team-code").textContent = display(team);
         group.querySelector(".team-total").textContent = `${records.length} ${records.length === 1 ? "person" : "people"}`;
         group.querySelectorAll("[data-team-status]").forEach((button) => { button.dataset.team = team; });
-
+        const teamHeading = group.querySelector(".team-heading");
         const members = group.querySelector(".team-members");
+        const membersContent = group.querySelector(".team-members-content");
+        teamHeading.setAttribute("aria-controls", `team-members-${team}`);
+        members.id = `team-members-${team}`;
+        const isExpanded = expandedTeams.has(team);
+        group.classList.toggle("collapsed", !isExpanded);
+        teamHeading.setAttribute("aria-expanded", String(isExpanded));
+        teamHeading.addEventListener("click", (event) => {
+            if (event.target.closest("[data-team-status]")) return;
+            const collapsed = group.classList.toggle("collapsed");
+            const expanded = !collapsed;
+            teamHeading.setAttribute("aria-expanded", String(expanded));
+            if (expanded) {
+                expandedTeams.add(team);
+            } else {
+                expandedTeams.delete(team);
+            }
+            if (collapsed) {
+                members.style.maxHeight = `${members.scrollHeight}px`;
+                void members.offsetHeight;
+                requestAnimationFrame(() => { members.style.maxHeight = "0px"; });
+            } else {
+                members.style.maxHeight = "0px";
+                void members.offsetHeight;
+                requestAnimationFrame(() => { members.style.maxHeight = `${members.scrollHeight}px`; });
+            }
+        });
+        teamHeading.addEventListener("keydown", (event) => {
+            if (event.target.closest("[data-team-status]")) return;
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            teamHeading.click();
+        });
+
         records.forEach((record) => {
             const person = personTemplate.content.firstElementChild.cloneNode(true);
             const currentStatus = getAttendanceStatus(record);
@@ -138,9 +183,15 @@ function render() {
             person.querySelector(".person-name").textContent = display(record.name);
             person.querySelector(".person-meta").textContent = `${display(record.school)} · ${display(record.dob)}`;
             person.querySelector(".status-placeholder").replaceWith(createStatusButtons(record, currentStatus));
-            members.append(person);
+            membersContent.append(person);
         });
         results.append(group);
+        if (isExpanded) {
+            members.style.transition = "none";
+            members.style.maxHeight = `${members.scrollHeight}px`;
+            void members.offsetHeight;
+            requestAnimationFrame(() => { members.style.transition = ""; });
+        }
     });
 }
 
