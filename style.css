@@ -120,6 +120,15 @@ input {
     padding: 13px 44px;
 }
 
+input[type="search"]::-webkit-search-cancel-button {
+    appearance: none;
+    display: none;
+}
+
+input[type="search"]::-moz-search-clear {
+    display: none;
+}
+
 select {
     appearance: none;
     width: auto;

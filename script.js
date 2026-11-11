@@ -206,30 +206,43 @@ function render() {
     });
     const matchingTeams = new Set(searchFiltered.filter((record) => !state.statusFilter || getAttendanceStatus(record) === state.statusFilter).map((record) => record.team));
     const filtered = state.statusFilter ? state.records.filter((record) => matchingTeams.has(record.team)) : searchFiltered;
-    const presentCount = state.records.filter((record) => getAttendanceStatus(record) === "present").length;
-    const absentCount = state.records.filter((record) => getAttendanceStatus(record) === "absent").length;
-    const flaggedCount = state.records.filter((record) => getAttendanceStatus(record) === "flagged").length;
+    const filteredTeams = new Set(filtered.map((record) => record.team));
 
     resultCount.replaceChildren();
-    const present = document.createElement("strong");
-    present.textContent = presentCount;
-    const absent = document.createElement("strong");
-    absent.textContent = absentCount;
-    const flagged = document.createElement("strong");
-    flagged.textContent = flaggedCount;
-    resultCount.append(present, " present · ", absent, " absent  · ", flagged, " flagged");
+    const takenAttendanceTeamCount = document.createElement("strong");
+    takenAttendanceTeamCount.textContent = [...new Set(state.records.filter((record) => getAttendanceStatus(record) !== "unprocessed").map((record) => record.team))].length;
+    const totalTeamCount = document.createElement("strong");
+    totalTeamCount.textContent = [...new Set(state.records.map((record) => record.team))].length;
+    const teamStatuses = state.records.reduce((teams, record) => {
+        const team = teams.get(record.team) || new Set();
+        team.add(getAttendanceStatus(record));
+        teams.set(record.team, team);
+        return teams;
+    }, new Map());
+    // A team with at least one present member is counted as present.
+    const presentTeamCount = document.createElement("strong");
+    presentTeamCount.textContent = [...teamStatuses.values()].filter((statuses) => statuses.has("present")).length;
+    // An absent team must have no present members.
+    const absentTeamCount = document.createElement("strong");
+    absentTeamCount.textContent = [...teamStatuses.values()]
+        .filter((statuses) => statuses.has("absent") && !statuses.has("present")).length;
+    // A team with at least one flagged member is counted as flagged.
+    const flaggedTeamCount = document.createElement("strong");
+    flaggedTeamCount.textContent = [...teamStatuses.values()].filter((statuses) => statuses.has("flagged")).length;
+    resultCount.append("Teams: ", takenAttendanceTeamCount, " / ", totalTeamCount, " taken attendance · ", presentTeamCount, " present · ", absentTeamCount, " absent  · ", flaggedTeamCount, " flagged");
     clearButton.classList.toggle("visible", Boolean(state.query));
-    status.textContent = `${filtered.length} shown${state.statusFilter ? " · full teams displayed" : ""}`;
+    status.textContent = `${filteredTeams.size} shown${state.statusFilter ? ` · filtered for ${state.statusFilter}` : ""}`;
     results.replaceChildren();
 
-    if (!filtered.length) {
+    if (!filteredTeams.size) {
         results.append(emptyTemplate.content.cloneNode(true));
         return;
     }
 
-    const groups = filtered.reduce((result, record) => {
-        (result[record.team] ||= []).push(record);
-        return result;
+    const groups = filtered.reduce((teams, record) => {
+        if (!filteredTeams.has(record.team)) return teams;
+        (teams[record.team] ||= []).push(record);
+        return teams;
     }, {});
     Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).forEach(([team, records]) => {
         const group = teamTemplate.content.firstElementChild.cloneNode(true);
