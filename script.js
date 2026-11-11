@@ -200,7 +200,8 @@ function render() {
 
     const query = state.query.toLowerCase();
     const searchFiltered = state.records.filter((record) => {
-        const matchesQuery = !query || [record.team, record.name].some((value) => value.toLowerCase().includes(query));
+        const matchesQuery = !query || [record.team, record.teamName, record.name]
+            .some((value) => value.toLowerCase().includes(query));
         return matchesQuery && (!state.team || record.team === state.team);
     });
     const matchingTeams = new Set(searchFiltered.filter((record) => !state.statusFilter || getAttendanceStatus(record) === state.statusFilter).map((record) => record.team));
