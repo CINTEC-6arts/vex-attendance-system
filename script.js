@@ -48,6 +48,31 @@ function display(value) {
     return value || "-";
 }
 
+function highlightText(element, value, query) {
+    element.replaceChildren();
+    const text = display(value);
+    if (!query) {
+        element.append(text);
+        return;
+    }
+
+    const normalizedText = text.toLowerCase();
+    const normalizedQuery = query.toLowerCase();
+    let start = 0;
+    let matchIndex = normalizedText.indexOf(normalizedQuery, start);
+    while (matchIndex !== -1) {
+        element.append(
+            text.slice(start, matchIndex),
+            Object.assign(document.createElement("mark"), {
+                textContent: text.slice(matchIndex, matchIndex + query.length),
+            }),
+        );
+        start = matchIndex + query.length;
+        matchIndex = normalizedText.indexOf(normalizedQuery, start);
+    }
+    element.append(text.slice(start));
+}
+
 function parseCSV(text) {
     const rows = [];
     let row = [];
@@ -252,7 +277,7 @@ function render() {
     }, {});
     Object.entries(organisationGroups).sort(([a], [b]) => a.localeCompare(b)).forEach(([organisation, teams]) => {
         const organisationGroup = organisationTemplate.content.firstElementChild.cloneNode(true);
-        organisationGroup.querySelector(".organisation-name").textContent = display(organisation);
+        highlightText(organisationGroup.querySelector(".organisation-name"), organisation, query);
         organisationGroup.querySelector(".organisation-total").textContent = `${teams.length} ${teams.length === 1 ? "team" : "teams"}`;
         const organisationTeams = organisationGroup.querySelector(".organisation-teams");
 
@@ -260,7 +285,7 @@ function render() {
         const group = teamTemplate.content.firstElementChild.cloneNode(true);
         const teamRecords = state.records.filter((record) => record.teamCode === team);
         group.style.setProperty("--team-gradient", getTeamGradient(teamRecords));
-        group.querySelector(".team-code").textContent = display(team);
+        highlightText(group.querySelector(".team-code"), team, query);
         group.querySelector(".team-total").textContent = `${records.length} ${records.length === 1 ? "person" : "people"}`;
         group.querySelectorAll("[data-team-status]").forEach((button) => { button.dataset.team = team; });
         const teamHeading = group.querySelector(".team-heading");
@@ -268,7 +293,8 @@ function render() {
         const membersContent = group.querySelector(".team-members-content");
         teamHeading.setAttribute("aria-controls", `team-members-${team}`);
         members.id = `team-members-${team}`;
-        const isExpanded = expandedTeams.has(team);
+        const nameMatchesQuery = Boolean(query) && records.some((record) => record.name.toLowerCase().includes(query));
+        const isExpanded = expandedTeams.has(team) || nameMatchesQuery;
         group.classList.toggle("collapsed", !isExpanded);
         teamHeading.setAttribute("aria-expanded", String(isExpanded));
         teamHeading.addEventListener("click", (event) => {
@@ -289,7 +315,7 @@ function render() {
             person.classList.add(currentStatus);
             person.querySelector(".person-image").src = `images/${encodeURIComponent(record.image)}`;
             person.querySelector(".person-image").alt = display(record.name);
-            person.querySelector(".person-name").textContent = display(record.name);
+            highlightText(person.querySelector(".person-name"), record.name, query);
             person.querySelector(".person-meta").textContent = `${display(record.school)} · ${display(record.dob)}`;
             person.querySelector(".status-placeholder").replaceWith(createStatusButtons(record, currentStatus));
             membersContent.append(person);

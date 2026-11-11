@@ -283,6 +283,14 @@ select:focus {
     color: var(--ink);
 }
 
+mark {
+    padding: 0 2px;
+    border-radius: 3px;
+    background: #ffab00;
+    color: #1b1208;
+    box-shadow: 0 0 8px rgba(255, 171, 0, 0.7);
+}
+
 .status {
     color: var(--muted);
     font-size: 13px;
