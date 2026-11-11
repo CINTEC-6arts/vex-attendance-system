@@ -479,6 +479,8 @@ mark {
     height: 210px;
     object-fit: cover;
     background: #26334e;
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
 .person-info {

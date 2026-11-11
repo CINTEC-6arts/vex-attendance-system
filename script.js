@@ -27,6 +27,7 @@ const emptyTemplate = document.querySelector("#empty-template");
 const teamOptionTemplate = document.querySelector("#team-option-template");
 const expandedTeams = new Set();
 const teamAnimationDuration = 260;
+const attendanceStatuses = ["unprocessed", "present", "absent", "flagged"];
 
 const today = new Date();
 const todayKey = today.toISOString().slice(0, 10);
@@ -310,6 +311,8 @@ function render() {
             person.classList.add(currentStatus);
             person.querySelector(".person-image").src = `images/${encodeURIComponent(record.image)}`;
             person.querySelector(".person-image").alt = display(record.name);
+            person.dataset.teamCode = record.teamCode;
+            person.dataset.personName = record.name;
             highlightText(person.querySelector(".person-name"), record.name, query);
             person.querySelector(".person-meta").textContent = `${display(record.school)} · ${display(record.dob)}`;
             person.querySelector(".status-placeholder").replaceWith(createStatusButtons(record, currentStatus));
@@ -420,11 +423,23 @@ results.addEventListener("click", (event) => {
         return;
     }
     const button = event.target.closest("[data-status]");
-    if (!button) return;
-    const [team, name] = button.dataset.attendance.split(":");
-    const record = state.records.find((item) => item.teamCode === team && item.name === name);
+    if (button) {
+        const [team, name] = button.dataset.attendance.split(":");
+        const record = state.records.find((item) => item.teamCode === team && item.name === name);
+        if (!record) return;
+        state.attendance[attendanceKey(record)] = button.dataset.status;
+        saveAttendance();
+        renderPreservingScroll();
+        return;
+    }
+
+    const person = event.target.closest(".person-row");
+    if (!person) return;
+    const record = state.records.find((item) => item.teamCode === person.dataset.teamCode && item.name === person.dataset.personName);
     if (!record) return;
-    state.attendance[attendanceKey(record)] = button.dataset.status;
+    const currentStatus = getAttendanceStatus(record);
+    const nextStatus = attendanceStatuses[(attendanceStatuses.indexOf(currentStatus) + 1) % attendanceStatuses.length];
+    state.attendance[attendanceKey(record)] = nextStatus;
     saveAttendance();
     renderPreservingScroll();
 });
