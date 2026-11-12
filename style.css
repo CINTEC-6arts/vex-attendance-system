@@ -109,6 +109,16 @@ h1 {
     box-shadow: var(--shadow);
 }
 
+.mobile-event-row,
+.mobile-search-row,
+.filter-controls {
+    display: contents;
+}
+
+#toggle-filters {
+    display: none;
+}
+
 .search-wrap {
     position: relative;
     flex: 1;
@@ -136,7 +146,8 @@ select {
 }
 
 input {
-    padding: 13px 44px;
+    height: 44px;
+    padding: 0 44px;
 }
 
 input[type="search"]::-webkit-search-cancel-button {
@@ -152,7 +163,8 @@ select {
     appearance: none;
     width: auto;
     min-width: 150px;
-    padding: 13px 14px 13px 14px;
+    height: 44px;
+    padding: 0 40px 0 14px;
     cursor: pointer;
 }
 
@@ -261,6 +273,19 @@ select:focus {
     border-color: var(--accent);
     outline: 2px solid var(--accent);
     outline-offset: 1px;
+}
+
+.clear-filters:disabled {
+    border-color: var(--line);
+    background: #202b42;
+    color: #64708a;
+    cursor: not-allowed;
+    opacity: .7;
+}
+
+.clear-filters:disabled:hover,
+.clear-filters:disabled:focus-visible {
+    outline: none;
 }
 
 .attendance-date {
@@ -871,6 +896,29 @@ select:focus {
     color: var(--ink);
 }
 
+.attendance-tally {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.attendance-tally .tally-icon {
+    font-size: 17px;
+}
+
+.attendance-tally.present .tally-icon {
+    color: #58d68d;
+}
+
+.attendance-tally.absent .tally-icon {
+    color: #ff6b78;
+}
+
+.attendance-tally.flagged .tally-icon {
+    color: #ffbd5c;
+}
+
 mark {
     padding: 0 2px;
     border-radius: 3px;
@@ -1359,8 +1407,64 @@ mark {
         margin: 0 0 20px;
     }
 
-    .toolbar {
+    .mobile-event-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+    }
+
+    .mobile-event-row .event-select-wrap {
+        flex: 1;
+        height: 44px;
+    }
+
+    .mobile-event-row .event-select-wrap select {
+        height: 44px;
+    }
+
+    .mobile-event-row .actions {
+        width: auto;
+        flex: 0 0 auto;
+    }
+
+    .mobile-event-row .action-button {
+        flex: 0 0 44px;
+    }
+
+    .mobile-event-row .clear-filters {
+        margin-top: 0;
+    }
+
+    .mobile-search-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 44px 44px 44px;
+        gap: 8px;
         margin-top: 12px;
+    }
+
+    #toggle-filters {
+        display: inline-grid;
+        margin: 0;
+    }
+
+    .mobile-search-row > #toggle-teams {
+        margin: 0;
+    }
+
+    .mobile-search-row > #clear-filters {
+        margin: 0;
+    }
+
+    .filter-controls {
+        display: none;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .filter-controls.open {
+        display: grid;
     }
 
     select {
@@ -1372,6 +1476,11 @@ mark {
         margin-top: 10px;
     }
 
+    .mobile-event-row .select-wrap,
+    .filter-controls .select-wrap {
+        margin-top: 0;
+    }
+
     .select-wrap select {
         margin-top: 0;
     }
@@ -1381,18 +1490,21 @@ mark {
         margin-top: 10px;
     }
 
-    .control-toolbar,
+    .filter-controls .clear-filters {
+        margin-top: 0;
+    }
+
     .toolbar {
-        align-items: flex-start;
-        flex-direction: column;
+        align-items: center;
+        flex-direction: row;
+        justify-content: space-between;
+        margin-top: 12px;
     }
 
-    .actions {
-        width: 100%;
-    }
-
-    .action-button {
-        flex: 1;
+    .toolbar .status {
+        margin-left: auto;
+        text-align: right;
+        white-space: nowrap;
     }
 
     .team-members {
@@ -1428,26 +1540,45 @@ mark {
         align-items: stretch;
     }
 
-    .search-wrap {
+    .mobile-search-row > .search-wrap {
         flex: 1 1 100%;
         order: 2;
     }
 
-    .control-toolbar > .select-wrap:not(.event-select-wrap) {
+    .filter-controls > .select-wrap:not(.event-select-wrap) {
         flex: 1 1 0;
         min-width: 160px;
     }
 
-    .control-toolbar > .event-select-wrap {
+    .mobile-event-row > .event-select-wrap {
         flex: 1 1 0;
     }
 
-    .control-toolbar > .actions {
+    .mobile-event-row > .actions {
         order: 1;
     }
 
-    .control-toolbar > .search-wrap ~ .select-wrap,
-    .control-toolbar > .search-wrap ~ .clear-filters {
+    .mobile-search-row > .search-wrap ~ .select-wrap,
+    .mobile-search-row > .search-wrap ~ .clear-filters {
         order: 3;
+    }
+}
+
+@media (min-width: 901px) {
+    .filter-controls > * {
+        order: 2;
+    }
+
+    .mobile-search-row > #clear-filters,
+    .mobile-search-row > #toggle-teams {
+        order: 3;
+    }
+
+    .toolbar {
+        order: 4;
+    }
+
+    .loading-progress {
+        order: 5;
     }
 }

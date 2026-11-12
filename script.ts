@@ -104,6 +104,8 @@ const syncConflictLabelText = query<HTMLElement>("#sync-conflict-label-text");
 const syncReviewList = query<HTMLElement>("#sync-review-list");
 const closeSyncReviewButton = query<HTMLButtonElement>("#close-sync-review");
 const applySyncReviewButton = query<HTMLButtonElement>("#apply-sync-review");
+const toggleFiltersButton = query<HTMLButtonElement>("#toggle-filters");
+const toggleFiltersIcon = query<HTMLElement>("#toggle-filters-icon");
 const toggleTeamsButton = query<HTMLButtonElement>("#toggle-teams");
 const toggleTeamsIcon = query<HTMLElement>("#toggle-teams-icon");
 const teamTemplate = query<HTMLTemplateElement>("#team-template");
@@ -573,9 +575,13 @@ function setTeamExpanded(group: HTMLElement, expanded: boolean, animate = true):
 function updateToggleTeamsButton(): void {
     const groups = [...results.querySelectorAll(".team-group")];
     const allExpanded = groups.length > 0 && groups.every((group) => !group.classList.contains("collapsed"));
-    toggleTeamsIcon.textContent = allExpanded ? "unfold_less" : "unfold_more";
+    toggleTeamsIcon.textContent = allExpanded ? "collapse_content" : "expand_content";
     toggleTeamsButton.setAttribute("aria-label", allExpanded ? "Collapse all teams" : "Expand all teams");
     toggleTeamsButton.title = allExpanded ? "Collapse all teams" : "Expand all teams";
+}
+
+function updateClearFiltersButton(): void {
+    clearFiltersButton.disabled = !teamFilter.value && !divisionFilter.value && !statusFilter.value;
 }
 
 function render(): void {
@@ -612,8 +618,25 @@ function render(): void {
     // A team with at least one flagged member is counted as flagged.
     const flaggedTeamCount = document.createElement("strong");
     flaggedTeamCount.textContent = String([...teamStatuses.values()].filter((statuses) => statuses.has("flagged")).length);
-    resultCount.append("Teams: ", takenAttendanceTeamCount, " / ", totalTeamCount, " taken attendance · ", presentTeamCount, " present · ", absentTeamCount, " absent  · ", flaggedTeamCount, " flagged");
+    const appendStatusTally = (count: HTMLElement, status: AttendanceStatus, label: string, icon: string): void => {
+        const tally = document.createElement("span");
+        tally.className = `attendance-tally ${status}`;
+        tally.setAttribute("aria-label", `${count.textContent} ${label}`);
+        const statusIcon = document.createElement("span");
+        statusIcon.className = "material-symbols-outlined tally-icon";
+        statusIcon.setAttribute("aria-hidden", "true");
+        statusIcon.textContent = icon;
+        tally.append(count, statusIcon);
+        resultCount.append(tally);
+    };
+    resultCount.append(takenAttendanceTeamCount, " / ", totalTeamCount, " taken attendance · ");
+    appendStatusTally(presentTeamCount, AttendanceStatus.PRESENT, "present", "check");
+    resultCount.append(" · ");
+    appendStatusTally(absentTeamCount, AttendanceStatus.ABSENT, "absent", "close");
+    resultCount.append(" · ");
+    appendStatusTally(flaggedTeamCount, AttendanceStatus.FLAGGED, "flagged", "flag");
     clearButton.classList.toggle("visible", Boolean(state.query));
+    updateClearFiltersButton();
     statusElement.textContent = `${filteredTeams.size} shown${state.statusFilter ? ` · filtered for ${state.statusFilter}` : ""}`;
     results.replaceChildren();
 
@@ -853,6 +876,15 @@ clearFiltersButton.addEventListener("click", () => {
     state.teamCode = "";
     state.statusFilter = "";
     renderPreservingScroll();
+});
+toggleFiltersButton.addEventListener("click", () => {
+    const filterControls = query<HTMLElement>(".filter-controls");
+    const expanded = filterControls.classList.toggle("open");
+    toggleFiltersButton.setAttribute("aria-expanded", String(expanded));
+    toggleFiltersButton.setAttribute("aria-label", expanded ? "Hide filters" : "Show filters");
+    toggleFiltersButton.title = expanded ? "Hide filters" : "Show filters";
+    toggleFiltersIcon.textContent = expanded ? "filter_alt" : "filter_list";
+    scheduleLayoutRecalculation();
 });
 toggleTeamsButton.addEventListener("click", () => {
     const groups = [...results.querySelectorAll<HTMLElement>(".team-group")];
