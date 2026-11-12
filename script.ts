@@ -352,11 +352,13 @@ function recalculateLayoutPreservingScroll(): void {
 }
 
 let resizeFrame = 0;
+let resizeTimeout = 0;
 const scheduleLayoutRecalculation = (): void => {
+    window.clearTimeout(resizeTimeout);
     cancelAnimationFrame(resizeFrame);
-    resizeFrame = requestAnimationFrame(() => {
-        recalculateLayoutPreservingScroll();
-    });
+    resizeTimeout = window.setTimeout(() => {
+        resizeFrame = requestAnimationFrame(recalculateLayoutPreservingScroll);
+    }, 120);
 };
 window.addEventListener("resize", scheduleLayoutRecalculation, { passive: true });
 
