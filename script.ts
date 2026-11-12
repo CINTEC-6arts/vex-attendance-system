@@ -89,17 +89,16 @@ const syncVideo = query<HTMLVideoElement>("#sync-video");
 const syncScanCanvas = document.createElement("canvas");
 const syncScanContext = syncScanCanvas.getContext("2d", { willReadFrequently: true });
 const syncMessage = query<HTMLElement>("#sync-message");
-const syncSummary = query<HTMLElement>("#sync-summary");
 const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
 const cameraSelect = query<HTMLSelectElement>("#camera-select");
-const syncDiscrepancies = query<HTMLUListElement>("#sync-discrepancies");
 const closeSyncButton = query<HTMLButtonElement>("#close-sync");
 const syncReviewDialog = query<HTMLDialogElement>("#sync-review-dialog");
 const syncReviewSummary = query<HTMLElement>("#sync-review-summary");
 const syncStatusTally = query<HTMLElement>("#sync-status-tally");
 const syncConflictHeading = query<HTMLElement>("#sync-conflict-heading");
+const chooseLocalAllButton = query<HTMLButtonElement>("#choose-local-all");
+const chooseIncomingAllButton = query<HTMLButtonElement>("#choose-incoming-all");
 const syncReviewList = query<HTMLElement>("#sync-review-list");
-const cancelSyncReviewButton = query<HTMLButtonElement>("#cancel-sync-review");
 const closeSyncReviewButton = query<HTMLButtonElement>("#close-sync-review");
 const applySyncReviewButton = query<HTMLButtonElement>("#apply-sync-review");
 const toggleTeamsButton = query<HTMLButtonElement>("#toggle-teams");
@@ -201,17 +200,8 @@ async function applySyncPayload(raw: string): Promise<void> {
         importedCounts.set(incoming, (importedCounts.get(incoming) || 0) + 1);
     });
     saveAttendance();
-    syncDiscrepancies.replaceChildren(...[...discrepancies.values()].map(({ name, local, incoming }) => {
-        const item = document.createElement("li");
-        item.textContent = `${name}: this device ${local}, scanned device ${incoming}`;
-        return item;
-    }));
     renderPreservingScroll();
     const importedCount = [...importedCounts.values()].reduce((total, count) => total + count, 0);
-    syncSummary.textContent = discrepancies.size
-        ? `Imported ${importedCount}; kept ${discrepancies.size} conflicting status${discrepancies.size === 1 ? "" : "es"}.`
-        : `Imported ${importedCount} status${importedCount === 1 ? "" : "es"} successfully.`;
-    syncSummary.classList.toggle("sync-error", discrepancies.size > 0);
     await refreshSyncQr();
     syncMessage.textContent = discrepancies.size ? "Review the flagged differences before applying them." : "Ready to scan or share the updated QR code.";
     syncStatusTally.replaceChildren(...[
@@ -224,21 +214,65 @@ async function applySyncPayload(raw: string): Promise<void> {
         item.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">${icon}</span><strong>${importedCounts.get(status as AttendanceStatus) || 0}</strong><span>${label}</span>`;
         return item;
     }));
-    syncReviewList.replaceChildren(...[...pendingSyncChoices].map(([key, choice]) => {
-            const row = document.createElement("label");
-            row.className = "sync-review-row";
-            const local = getAttendanceStatus(choice.record);
-            const name = document.createElement("span");
-            name.textContent = choice.record.name;
-            const select = document.createElement("select");
-            select.dataset.syncChoice = key;
-            select.append(
-                new Option(`Keep this device: ${local}`, local),
-                new Option(`Use scanned device: ${choice.incoming}`, choice.incoming),
-            );
-            row.append(name, select);
-            return row;
-        }));
+    const statusIcons: Record<AttendanceStatus, string> = {
+        [AttendanceStatus.UNPROCESSED]: "question_mark",
+        [AttendanceStatus.PRESENT]: "check",
+        [AttendanceStatus.ABSENT]: "close",
+        [AttendanceStatus.FLAGGED]: "flag",
+    };
+    const table = document.createElement("table");
+    table.className = "sync-review-table";
+    table.innerHTML = "<thead><tr><th scope=\"col\">Team</th><th scope=\"col\">Name</th><th scope=\"col\">This device</th><th scope=\"col\">Scanned device</th></tr></thead>";
+    const body = document.createElement("tbody");
+    [...pendingSyncChoices].forEach(([key, choice]) => {
+        const row = document.createElement("tr");
+        const local = getAttendanceStatus(choice.record);
+        const team = document.createElement("th");
+        team.scope = "row";
+        team.className = "sync-review-team-code";
+        const teamCode = document.createElement("span");
+        teamCode.className = "sync-review-team-number";
+        teamCode.textContent = choice.record.teamCode;
+        const division = document.createElement("span");
+        division.className = "sync-review-division";
+        division.textContent = choice.record.division;
+        team.append(teamCode, division);
+        const name = document.createElement("td");
+        name.className = "sync-review-name";
+        const personName = document.createElement("span");
+        personName.className = "sync-review-person";
+        personName.textContent = choice.record.name;
+        name.append(personName);
+        row.append(team, name);
+        const options: Array<[string, AttendanceStatus, string]> = [
+            ["local", local, "This device"],
+            ["incoming", choice.incoming, "Scanned device"],
+        ];
+        options.forEach(([source, status, label]) => {
+            const cell = document.createElement("td");
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "sync-choice-button";
+            button.dataset.syncChoice = key;
+            button.dataset.syncSource = source;
+            button.dataset.syncStatus = status;
+            button.setAttribute("aria-pressed", source === "local" ? "true" : "false");
+            button.setAttribute("aria-label", `${label}: ${status}`);
+            const icon = document.createElement("span");
+            icon.className = `material-symbols-outlined sync-status-icon ${status}`;
+            icon.setAttribute("aria-hidden", "true");
+            icon.textContent = statusIcons[status];
+            const statusLabel = document.createElement("span");
+            statusLabel.className = "sync-status-label";
+            statusLabel.textContent = status;
+            button.append(icon, statusLabel);
+            cell.append(button);
+            row.append(cell);
+        });
+        body.append(row);
+    });
+    table.append(body);
+    syncReviewList.replaceChildren(table);
     syncConflictHeading.hidden = !pendingSyncChoices.size;
     applySyncReviewButton.hidden = !pendingSyncChoices.size;
     syncReviewSummary.textContent = pendingSyncChoices.size
@@ -890,9 +924,6 @@ resetButton.addEventListener("click", () => {
 syncAttendanceButton.addEventListener("click", async () => {
     try {
         syncMessage.textContent = "Preparing sync QR code and camera...";
-        syncSummary.textContent = "";
-        syncSummary.classList.remove("sync-error");
-        syncDiscrepancies.replaceChildren();
         syncCanvas.hidden = false;
         syncVideo.hidden = false;
         syncDialog.showModal();
@@ -925,8 +956,7 @@ syncAttendanceButton.addEventListener("click", async () => {
                     try {
                         await applySyncPayload(rawValue);
                     } catch (syncError) {
-                        syncSummary.textContent = syncError instanceof Error ? syncError.message : String(syncError);
-                        syncSummary.classList.add("sync-error");
+                        syncMessage.textContent = syncError instanceof Error ? syncError.message : String(syncError);
                     }
                 }
             }
@@ -944,16 +974,14 @@ cameraSelect.addEventListener("change", () => {
 });
 closeSyncButton.addEventListener("click", closeSyncDialog);
 syncDialog.addEventListener("cancel", closeSyncDialog);
-cancelSyncReviewButton.addEventListener("click", () => {
-    syncReviewDialog.close();
-});
 closeSyncReviewButton.addEventListener("click", () => syncReviewDialog.close());
 applySyncReviewButton.addEventListener("click", async () => {
     let appliedCount = 0;
-    syncReviewList.querySelectorAll<HTMLSelectElement>("[data-sync-choice]").forEach((select) => {
-        const choice = pendingSyncChoices.get(select.dataset.syncChoice || "");
-        if (!choice || !isAttendanceStatus(select.value)) return;
-        state.attendance[attendanceKey(choice.record)] = select.value;
+    syncReviewList.querySelectorAll<HTMLButtonElement>(".sync-choice-button[aria-pressed='true']").forEach((button) => {
+        const choice = pendingSyncChoices.get(button.dataset.syncChoice || "");
+        const status = button.dataset.syncStatus;
+        if (!choice || !status || !isAttendanceStatus(status)) return;
+        state.attendance[attendanceKey(choice.record)] = status;
         appliedCount += 1;
     });
     saveAttendance();
@@ -961,9 +989,24 @@ applySyncReviewButton.addEventListener("click", async () => {
     pendingSyncChoices.clear();
     discrepancies.clear();
     syncReviewDialog.close();
-    syncSummary.textContent = `Applied ${appliedCount} reviewed status${appliedCount === 1 ? "" : "es"}.`;
-    syncSummary.classList.remove("sync-error");
+    syncMessage.textContent = `Applied ${appliedCount} reviewed status${appliedCount === 1 ? "" : "es"}.`;
     await refreshSyncQr();
+});
+const chooseAllSyncSource = (source: "local" | "incoming"): void => {
+    syncReviewList.querySelectorAll<HTMLButtonElement>(".sync-choice-button").forEach((button) => {
+        button.setAttribute("aria-pressed", button.dataset.syncSource === source ? "true" : "false");
+    });
+};
+chooseLocalAllButton.addEventListener("click", () => chooseAllSyncSource("local"));
+chooseIncomingAllButton.addEventListener("click", () => chooseAllSyncSource("incoming"));
+syncReviewList.addEventListener("click", (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>(".sync-choice-button");
+    if (!button) return;
+    const key = button.dataset.syncChoice;
+    if (!key) return;
+    syncReviewList.querySelectorAll<HTMLButtonElement>(`.sync-choice-button[data-sync-choice="${CSS.escape(key)}"]`).forEach((option) => {
+        option.setAttribute("aria-pressed", option === button ? "true" : "false");
+    });
 });
 
 statusElement.textContent = "Loading events...";

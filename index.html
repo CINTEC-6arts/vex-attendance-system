@@ -90,7 +90,6 @@
                         <p id="sync-message" class="status">Share your QR code or scan another device.</p>
                     </div>
                 </header>
-                <p id="sync-summary" class="sync-summary" aria-live="polite"></p>
                 <div class="sync-panels">
                     <section class="sync-panel">
                         <div class="sync-panel-heading">
@@ -123,7 +122,6 @@
                         </label>
                     </section>
                 </div>
-                <ul id="sync-discrepancies" class="sync-discrepancies"></ul>
             </div>
         </dialog>
         <dialog id="sync-review-dialog" class="sync-dialog sync-review-dialog">
@@ -142,10 +140,13 @@
                 <div id="sync-conflict-heading" class="sync-conflict-heading" hidden>
                     <span class="material-symbols-outlined" aria-hidden="true">warning</span>
                     <span>Conflicts to resolve</span>
+                    <div class="sync-conflict-bulk-actions">
+                        <button id="choose-local-all" class="sync-bulk-button" type="button">Use this device for all</button>
+                        <button id="choose-incoming-all" class="sync-bulk-button" type="button">Use scanned device for all</button>
+                    </div>
                 </div>
                 <div id="sync-review-list" class="sync-review-list"></div>
                 <div class="sync-review-actions">
-                    <button id="cancel-sync-review" class="action-button secondary" type="button">Close</button>
                     <button id="apply-sync-review" class="action-button danger" type="button" hidden>Apply choices</button>
                 </div>
             </div>
