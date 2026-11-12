@@ -317,6 +317,47 @@ function updateStickyOffsets() {
 const stickyOffsetObserver = new ResizeObserver(updateStickyOffsets);
 stickyOffsetObserver.observe(controlToolbar);
 
+function getResizeAnchor(): { element: HTMLElement; top: number } | null {
+    const candidates = [...results.querySelectorAll<HTMLElement>(".team-group")]
+        .map((group) => ({ group, rect: group.getBoundingClientRect() }));
+    const anchor = candidates.find(({ rect }) => rect.top <= 0 && rect.bottom > 0)
+        || candidates.find(({ rect }) => rect.top >= 0 && rect.top < window.innerHeight);
+    return anchor ? { element: anchor.group, top: anchor.rect.top } : null;
+}
+
+function recalculateLayoutPreservingScroll(): void {
+    const scrollPosition = window.scrollY;
+    const anchor = getResizeAnchor();
+    results.querySelectorAll<HTMLElement>(".team-group:not(.collapsed) .team-members").forEach((members) => {
+        const transition = members.style.transition;
+        members.style.transition = "none";
+        members.style.maxHeight = "none";
+        members.style.maxHeight = `${members.scrollHeight}px`;
+        members.style.transition = transition;
+    });
+    updateAbsoluteTeamGradients();
+    updateStickyOffsets();
+    requestAnimationFrame(() => {
+        const correction = anchor && anchor.element.isConnected
+            ? anchor.element.getBoundingClientRect().top - anchor.top
+            : 0;
+        window.scrollTo({
+            top: Math.max(0, scrollPosition + correction),
+            left: 0,
+            behavior: "auto",
+        });
+    });
+}
+
+let resizeFrame = 0;
+const scheduleLayoutRecalculation = (): void => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+        recalculateLayoutPreservingScroll();
+    });
+};
+window.addEventListener("resize", scheduleLayoutRecalculation, { passive: true });
+
 function attendanceKey(record) {
     return `${state.eventId}:${record.teamCode}:${record.division}:${record.name}`;
 }
