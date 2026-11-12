@@ -128,6 +128,7 @@ let syncStream: MediaStream | null = null;
 let scanLoopActive = false;
 let lastScannedPayload = "";
 let lastScannedAt = 0;
+let lockedSyncOrientation: OrientationLockType | null = null;
 const discrepancies = new Map<string, { name: string; local: AttendanceStatus; incoming: AttendanceStatus }>();
 const pendingSyncChoices = new Map<string, { record: RecordEntry; incoming: AttendanceStatus }>();
 
@@ -147,6 +148,24 @@ function stopSyncCamera(): void {
     syncStream?.getTracks().forEach((track) => track.stop());
     syncStream = null;
     syncVideo.srcObject = null;
+}
+
+async function lockSyncOrientation(): Promise<void> {
+    const orientation = screen.orientation;
+    if (!orientation?.lock) return;
+    const lockType: OrientationLockType = orientation.type.startsWith("landscape") ? "landscape" : "portrait";
+    try {
+        await orientation.lock(lockType);
+        lockedSyncOrientation = lockType;
+    } catch (orientationError) {
+        console.warn("Screen orientation could not be locked for QR sync.", orientationError);
+    }
+}
+
+function unlockSyncOrientation(): void {
+    if (!lockedSyncOrientation) return;
+    screen.orientation.unlock();
+    lockedSyncOrientation = null;
 }
 
 async function startSyncCamera(deviceId?: string): Promise<void> {
@@ -169,6 +188,7 @@ async function startSyncCamera(deviceId?: string): Promise<void> {
 
 function closeSyncDialog(): void {
     stopSyncCamera();
+    unlockSyncOrientation();
     syncDialog.close();
 }
 
@@ -998,6 +1018,7 @@ syncAttendanceButton.addEventListener("click", async () => {
         syncCanvas.hidden = false;
         syncVideo.hidden = false;
         syncDialog.showModal();
+        void lockSyncOrientation();
         const payload = await createSyncPayload();
         await refreshSyncQr();
         await startSyncCamera();
