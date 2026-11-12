@@ -619,7 +619,7 @@ mark {
 
 .team-members-content {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
     padding: 16px;
 }
@@ -634,12 +634,32 @@ mark {
     cursor: pointer;
 }
 
+.person-image-frame {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    background: #26334e;
+    isolation: isolate;
+}
+
+.person-image-frame::before {
+    position: absolute;
+    z-index: -1;
+    content: "";
+    inset: -18px;
+    background-image: var(--person-image-url);
+    background-position: center;
+    background-size: cover;
+    filter: blur(18px);
+    opacity: .8;
+    transform: scale(1.08);
+}
+
 .person-image {
     display: block;
     width: 100%;
-    height: 210px;
-    object-fit: cover;
-    background: #26334e;
+    height: 100%;
+    object-fit: contain;
     user-select: none;
     -webkit-user-drag: none;
 }
@@ -837,11 +857,8 @@ mark {
     }
 
     .team-members-content {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         padding: 12px;
     }
 
-    .person-image {
-        height: 240px;
-    }
 }

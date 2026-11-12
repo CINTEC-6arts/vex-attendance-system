@@ -437,7 +437,10 @@ function render(): void {
                     const currentStatus = getAttendanceStatus(record);
                     person.classList.add(currentStatus);
                     const imageUrl = `${getAssetPaths(state.eventId).images}${encodeURIComponent(record.image)}`;
-                    child<HTMLImageElement>(person, ".person-image").src = preloadedImages.get(imageUrl) || imageUrl;
+                    const displayImageUrl = preloadedImages.get(imageUrl) || imageUrl;
+                    const imageFrame = child<HTMLElement>(person, ".person-image-frame");
+                    imageFrame.style.setProperty("--person-image-url", `url("${displayImageUrl}")`);
+                    child<HTMLImageElement>(imageFrame, ".person-image").src = displayImageUrl;
                     child<HTMLImageElement>(person, ".person-image").alt = display(record.name);
                     person.dataset.teamCode = record.teamCode;
                     person.dataset.division = record.division;
