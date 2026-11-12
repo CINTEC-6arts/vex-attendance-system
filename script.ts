@@ -96,8 +96,8 @@ const syncReviewDialog = query<HTMLDialogElement>("#sync-review-dialog");
 const syncReviewSummary = query<HTMLElement>("#sync-review-summary");
 const syncStatusTally = query<HTMLElement>("#sync-status-tally");
 const syncConflictHeading = query<HTMLElement>("#sync-conflict-heading");
-const chooseLocalAllButton = query<HTMLButtonElement>("#choose-local-all");
-const chooseIncomingAllButton = query<HTMLButtonElement>("#choose-incoming-all");
+const syncConflictIcon = query<HTMLElement>("#sync-conflict-icon");
+const syncConflictLabelText = query<HTMLElement>("#sync-conflict-label-text");
 const syncReviewList = query<HTMLElement>("#sync-review-list");
 const closeSyncReviewButton = query<HTMLButtonElement>("#close-sync-review");
 const applySyncReviewButton = query<HTMLButtonElement>("#apply-sync-review");
@@ -222,7 +222,7 @@ async function applySyncPayload(raw: string): Promise<void> {
     };
     const table = document.createElement("table");
     table.className = "sync-review-table";
-    table.innerHTML = "<thead><tr><th scope=\"col\">Team</th><th scope=\"col\">Name</th><th scope=\"col\">This device</th><th scope=\"col\">Scanned device</th></tr></thead>";
+    table.innerHTML = "<thead><tr><th scope=\"col\">Team</th><th scope=\"col\">Name</th><th scope=\"col\"><span class=\"sync-device-heading\"><span>This device</span><button id=\"choose-local-all\" class=\"sync-bulk-button\" type=\"button\" aria-label=\"Use this device for all conflicts\" title=\"Use this device for all conflicts\"><span class=\"material-symbols-outlined\" aria-hidden=\"true\">done_all</span></button></span></th><th scope=\"col\"><span class=\"sync-device-heading\"><span>Scanned device</span><button id=\"choose-incoming-all\" class=\"sync-bulk-button\" type=\"button\" aria-label=\"Use scanned device for all conflicts\" title=\"Use scanned device for all conflicts\"><span class=\"material-symbols-outlined\" aria-hidden=\"true\">done_all</span></button></span></th></tr></thead>";
     const body = document.createElement("tbody");
     [...pendingSyncChoices].forEach(([key, choice]) => {
         const row = document.createElement("tr");
@@ -235,7 +235,7 @@ async function applySyncPayload(raw: string): Promise<void> {
         teamCode.textContent = choice.record.teamCode;
         const division = document.createElement("span");
         division.className = "sync-review-division";
-        division.textContent = choice.record.division;
+        division.textContent = `${choice.record.division} · ${choice.record.organisation}`;
         team.append(teamCode, division);
         const name = document.createElement("td");
         name.className = "sync-review-name";
@@ -273,8 +273,13 @@ async function applySyncPayload(raw: string): Promise<void> {
     });
     table.append(body);
     syncReviewList.replaceChildren(table);
-    syncConflictHeading.hidden = !pendingSyncChoices.size;
-    applySyncReviewButton.hidden = !pendingSyncChoices.size;
+    syncConflictHeading.hidden = false;
+    const hasConflicts = pendingSyncChoices.size > 0;
+    syncConflictIcon.textContent = hasConflicts ? "warning" : "check_circle";
+    syncConflictLabelText.textContent = hasConflicts ? "Conflicts to resolve" : "No conflicts to resolve";
+    syncConflictHeading.classList.toggle("has-conflicts", hasConflicts);
+    syncReviewList.hidden = !hasConflicts;
+    applySyncReviewButton.hidden = !hasConflicts;
     syncReviewSummary.textContent = pendingSyncChoices.size
         ? `${importedCount} imported successfully. ${pendingSyncChoices.size} conflicting status${pendingSyncChoices.size === 1 ? "" : "es"} need review.`
         : `${importedCount} status${importedCount === 1 ? "" : "es"} imported successfully.`;
@@ -997,10 +1002,14 @@ const chooseAllSyncSource = (source: "local" | "incoming"): void => {
         button.setAttribute("aria-pressed", button.dataset.syncSource === source ? "true" : "false");
     });
 };
-chooseLocalAllButton.addEventListener("click", () => chooseAllSyncSource("local"));
-chooseIncomingAllButton.addEventListener("click", () => chooseAllSyncSource("incoming"));
 syncReviewList.addEventListener("click", (event) => {
-    const button = (event.target as Element).closest<HTMLButtonElement>(".sync-choice-button");
+    const target = event.target as Element;
+    const bulkButton = target.closest<HTMLButtonElement>(".sync-bulk-button");
+    if (bulkButton) {
+        chooseAllSyncSource(bulkButton.id === "choose-local-all" ? "local" : "incoming");
+        return;
+    }
+    const button = target.closest<HTMLButtonElement>(".sync-choice-button");
     if (!button) return;
     const key = button.dataset.syncChoice;
     if (!key) return;

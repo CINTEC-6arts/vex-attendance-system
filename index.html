@@ -25,10 +25,10 @@
                     </label>
                     <div class="actions">
                         <button id="reset-attendance" class="action-button secondary danger icon-action" type="button" aria-label="Reset event attendance" title="Reset event attendance">
-                            <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                            <span class="material-symbols-outlined" aria-hidden="true">delete</span>
                         </button>
                         <button id="sync-attendance" class="clear-filters icon-action" type="button" aria-label="Sync attendance" title="Sync attendance">
-                            <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+                            <span class="material-symbols-outlined" aria-hidden="true">qr_code_2</span>
                         </button>
                     </div>
                     <div class="search-wrap">
@@ -138,11 +138,9 @@
                 </header>
                 <div id="sync-status-tally" class="sync-status-tally" aria-label="Imported status totals"></div>
                 <div id="sync-conflict-heading" class="sync-conflict-heading" hidden>
-                    <span class="material-symbols-outlined" aria-hidden="true">warning</span>
-                    <span>Conflicts to resolve</span>
-                    <div class="sync-conflict-bulk-actions">
-                        <button id="choose-local-all" class="sync-bulk-button" type="button">Use this device for all</button>
-                        <button id="choose-incoming-all" class="sync-bulk-button" type="button">Use scanned device for all</button>
+                    <div class="sync-conflict-label">
+                        <span id="sync-conflict-icon" class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                        <span id="sync-conflict-label-text">No conflicts to resolve</span>
                     </div>
                 </div>
                 <div id="sync-review-list" class="sync-review-list"></div>
