@@ -17,6 +17,7 @@
 body {
     margin: 0;
     min-width: 320px;
+    overflow-x: hidden;
     background: var(--background);
     color: var(--ink);
     font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -47,9 +48,10 @@ html {
 }
 
 .shell {
-    max-width: 1120px;
+    width: 100%;
+    max-width: none;
     margin: 0 auto;
-    padding: 48px 24px 64px;
+    padding: 48px clamp(16px, 3vw, 48px) 64px;
 }
 
 .eyebrow {
@@ -98,7 +100,8 @@ h1 {
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
-    margin: 0 -12px 24px;
+    width: 100%;
+    margin: 0 0 24px;
     padding: 12px;
     background: var(--surface);
     border: 1px solid var(--line);
@@ -123,6 +126,7 @@ h1 {
 input,
 select {
     width: 100%;
+    min-height: 44px;
     border: 1px solid var(--line);
     border-radius: 11px;
     background: #101a2d;
@@ -223,8 +227,9 @@ select:focus {
 .clear-filters {
     display: inline-grid;
     place-items: center;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
     padding: 0;
     border: 1px solid var(--line);
     border-radius: 11px;
@@ -288,8 +293,9 @@ select:focus {
 .action-button.secondary {
     display: inline-grid;
     place-items: center;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
     padding: 0;
     background: #2a3650;
     color: var(--ink);
@@ -1066,8 +1072,9 @@ mark {
 .team-action {
     display: inline-grid;
     place-items: center;
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
     padding: 0;
     border: 1px solid var(--line);
     border-radius: 7px;
@@ -1137,7 +1144,8 @@ mark {
 
 .team-members {
     max-height: 0;
-    max-width: calc(100% - 32px);
+    width: 100%;
+    max-width: none;
     opacity: 1;
     overflow: hidden;
     transition:
@@ -1151,13 +1159,15 @@ mark {
 
 .team-members-content {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+    justify-content: start;
     gap: 16px;
     padding: 16px;
 }
 
 .person-row {
     display: block;
+    width: 100%;
     overflow: hidden;
     background: var(--surface);
     border: 1px solid var(--line);
@@ -1224,8 +1234,9 @@ mark {
 .status-button {
     display: inline-grid;
     place-items: center;
-    width: 36px;
-    height: 34px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
     padding: 0;
     border: 2px solid #4a5874;
     border-radius: 8px;
@@ -1340,7 +1351,7 @@ mark {
 
 @media (max-width: 650px) {
     .shell {
-        padding: 32px 16px 48px;
+        padding: 32px 12px 48px;
     }
 
     .control-toolbar {
@@ -1366,7 +1377,7 @@ mark {
     }
 
     .clear-filters {
-        width: 42px;
+        width: 44px;
         margin-top: 10px;
     }
 
@@ -1389,8 +1400,54 @@ mark {
     }
 
     .team-members-content {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        padding: 12px;
+        grid-template-columns: repeat(auto-fill, minmax(min(145px, 100%), 1fr));
+        gap: 10px;
+        padding: 10px;
     }
 
+}
+
+@media (hover: none), (pointer: coarse) {
+    button,
+    select,
+    input,
+    .team-heading,
+    .person-row {
+        touch-action: manipulation;
+    }
+
+    .team-action {
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+    }
+}
+
+@media (max-width: 900px) {
+    .control-toolbar {
+        align-items: stretch;
+    }
+
+    .search-wrap {
+        flex: 1 1 100%;
+        order: 2;
+    }
+
+    .control-toolbar > .select-wrap:not(.event-select-wrap) {
+        flex: 1 1 0;
+        min-width: 160px;
+    }
+
+    .control-toolbar > .event-select-wrap {
+        flex: 1 1 0;
+    }
+
+    .control-toolbar > .actions {
+        order: 1;
+    }
+
+    .control-toolbar > .search-wrap ~ .select-wrap,
+    .control-toolbar > .search-wrap ~ .clear-filters {
+        order: 3;
+    }
 }
