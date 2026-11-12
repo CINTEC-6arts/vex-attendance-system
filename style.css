@@ -929,7 +929,7 @@ mark {
 .team-group {
     position: relative;
     isolation: isolate;
-    overflow: visible;
+    overflow: clip;
     background: var(--surface);
     outline-width: 1px;
     outline-style: solid;
@@ -946,11 +946,11 @@ mark {
     z-index: -1;
     content: "";
     inset: 0;
-    background: transparent;
+    background: var(--team-gradient, var(--surface));
     border-radius: inherit;
     clip-path: inset(0 round 16px);
-    filter: blur(7px);
-    opacity: .9;
+    filter: blur(10px);
+    opacity: .85;
 }
 
 .team-group>.team-heading[aria-expanded="true"] {
@@ -1131,6 +1131,7 @@ mark {
         outline-offset: -1px;
         background-size: var(--team-gradient-width, 100%) 100%;
         background-position: left top;
+        filter: blur(10px);
     }
 }
 
