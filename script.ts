@@ -533,6 +533,9 @@ function clearEventFilters() {
 async function switchEvent(eventId: string) {
     if (eventId && !events.some((event) => event.id === eventId)) return;
     state.eventId = eventId;
+    if (eventId) {
+        eventFilter.querySelector('option[value=""]')?.remove();
+    }
     clearEventFilters();
     results.replaceChildren();
     error.hidden = true;
@@ -564,11 +567,14 @@ searchInput.addEventListener("input", (event) => {
 });
 eventFilter.addEventListener("change", (event) => {
     const nextEventId = (event.target as HTMLSelectElement).value;
+    if (!nextEventId) {
+        eventFilter.value = state.eventId;
+        return;
+    }
     if (nextEventId === state.eventId) return;
     const nextEvent = events.find((item) => item.id === nextEventId);
     const nextEventLabel = nextEvent?.label || "Select event...";
-    const confirmed = window.confirm(`Switch to ${nextEventLabel}? Attendance is tracked separately for each event.`);
-    if (!confirmed) {
+    if (state.eventId && !window.confirm(`Switch to ${nextEventLabel}? Attendance is tracked separately for each event.`)) {
         eventFilter.value = state.eventId;
         return;
     }
