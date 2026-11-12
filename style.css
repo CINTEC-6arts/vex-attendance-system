@@ -531,6 +531,22 @@ select:focus {
     font-weight: 700;
 }
 
+.sync-conflict-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 20px;
+}
+
+.sync-conflict-label .material-symbols-outlined {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    line-height: 1;
+}
+
 .sync-conflict-heading:not(.has-conflicts) {
     color: #58d68d;
 }
