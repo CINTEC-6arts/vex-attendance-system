@@ -326,6 +326,68 @@ select:focus {
     accent-color: #c83d4b;
 }
 
+.sync-dialog {
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--surface);
+    color: var(--ink);
+}
+
+.sync-dialog::backdrop {
+    background: rgba(0, 0, 0, .72);
+}
+
+.sync-dialog-content {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    padding: 24px;
+}
+
+.sync-dialog h2,
+.sync-dialog p {
+    margin: 0;
+}
+
+.sync-summary {
+    min-height: 1.5em;
+    color: var(--accent);
+    font-size: 13px;
+}
+
+.sync-dialog canvas,
+.sync-dialog video {
+    display: block;
+    width: min(320px, 70vw);
+    max-height: 60vh;
+    border-radius: 10px;
+    background: white;
+}
+
+.sync-dialog canvas,
+.sync-dialog video {
+    width: min(320px, 42vw);
+}
+
+.sync-discrepancies {
+    width: 100%;
+    max-height: 180px;
+    margin: 0;
+    padding: 0 0 0 20px;
+    overflow: auto;
+    color: #ffb3b8;
+    font-size: 13px;
+}
+
+.sync-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+
 .result-count {
     margin: 0;
     color: var(--muted);

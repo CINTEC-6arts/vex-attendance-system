@@ -27,6 +27,9 @@
                         <button id="reset-attendance" class="action-button secondary danger icon-action" type="button" aria-label="Reset event attendance" title="Reset event attendance">
                             <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
                         </button>
+                        <button id="sync-attendance" class="clear-filters icon-action" type="button" aria-label="Sync attendance" title="Sync attendance">
+                            <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+                        </button>
                     </div>
                     <div class="search-wrap">
                         <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
@@ -74,6 +77,25 @@
             <section id="results" class="results" aria-live="polite"></section>
             <p id="error" class="error" hidden></p>
         </main>
+
+        <dialog id="sync-dialog" class="sync-dialog">
+            <div class="sync-dialog-content">
+                <button id="close-sync" class="clear-filters icon-action sync-close" type="button" aria-label="Close sync dialog" title="Close sync dialog">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+                <h2>Sync attendance</h2>
+                <p id="sync-message" class="status">Export this QR code or scan one from the primary device.</p>
+                <p id="sync-summary" class="sync-summary" aria-live="polite"></p>
+                <label id="camera-select-wrap" class="select-wrap sync-camera-select" hidden>
+                    <span>Camera</span>
+                    <select id="camera-select" aria-label="Choose camera"></select>
+                    <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
+                </label>
+                <ul id="sync-discrepancies" class="sync-discrepancies"></ul>
+                <canvas id="sync-qr" hidden></canvas>
+                <video id="sync-video" autoplay playsinline hidden></video>
+            </div>
+        </dialog>
 
         <template id="organisation-template">
             <section class="organisation-group">

@@ -1,3 +1,22 @@
+import * as QRCode from "qrcode";
+import jsQR from "jsqr";
+
+declare global {
+    interface BarcodeDetectorOptions {
+        formats?: string[];
+    }
+    interface DetectedBarcode {
+        rawValue?: string;
+    }
+    class BarcodeDetector {
+        constructor(options?: BarcodeDetectorOptions);
+        detect(source: CanvasImageSource | HTMLVideoElement): Promise<DetectedBarcode[]>;
+    }
+    interface Window {
+        BarcodeDetector?: typeof BarcodeDetector;
+    }
+}
+
 enum AttendanceStatus {
     UNPROCESSED = "unprocessed",
     PRESENT = "present",
@@ -20,6 +39,12 @@ type RecordEntry = {
 type EventDefinition = {
     id: string;
     label: string;
+};
+type SyncPayload = {
+    v: 1;
+    e: string;
+    h: string;
+    s: Array<[number, AttendanceStatus]>;
 };
 
 let events: EventDefinition[] = [];
@@ -57,6 +82,18 @@ const statusElement = query<HTMLElement>("#status");
 const loadingProgress = query<HTMLProgressElement>("#loading-progress");
 const error = query<HTMLElement>("#error");
 const resetButton = query<HTMLButtonElement>("#reset-attendance");
+const syncAttendanceButton = query<HTMLButtonElement>("#sync-attendance");
+const syncDialog = query<HTMLDialogElement>("#sync-dialog");
+const syncCanvas = query<HTMLCanvasElement>("#sync-qr");
+const syncVideo = query<HTMLVideoElement>("#sync-video");
+const syncScanCanvas = document.createElement("canvas");
+const syncScanContext = syncScanCanvas.getContext("2d", { willReadFrequently: true });
+const syncMessage = query<HTMLElement>("#sync-message");
+const syncSummary = query<HTMLElement>("#sync-summary");
+const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
+const cameraSelect = query<HTMLSelectElement>("#camera-select");
+const syncDiscrepancies = query<HTMLUListElement>("#sync-discrepancies");
+const closeSyncButton = query<HTMLButtonElement>("#close-sync");
 const toggleTeamsButton = query<HTMLButtonElement>("#toggle-teams");
 const toggleTeamsIcon = query<HTMLElement>("#toggle-teams-icon");
 const teamTemplate = query<HTMLTemplateElement>("#team-template");
@@ -72,6 +109,95 @@ const isAttendanceStatus = (value: string): value is AttendanceStatus => attenda
 const eventListPath = "events.txt";
 const maxFetchAttempts = 3;
 const preloadedImages = new Map<string, string>();
+let syncStream: MediaStream | null = null;
+let scanLoopActive = false;
+let lastScannedPayload = "";
+let lastScannedAt = 0;
+const discrepancies = new Map<string, { name: string; local: AttendanceStatus; incoming: AttendanceStatus }>();
+
+async function getDatasetHash(): Promise<string> {
+    const canonical = JSON.stringify(state.records);
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function stopSyncCamera(): void {
+    scanLoopActive = false;
+    syncStream?.getTracks().forEach((track) => track.stop());
+    syncStream = null;
+    syncVideo.srcObject = null;
+}
+
+async function startSyncCamera(deviceId?: string): Promise<void> {
+    stopSyncCamera();
+    syncStream = await navigator.mediaDevices.getUserMedia({
+        video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: "environment" } },
+    });
+    syncVideo.srcObject = syncStream;
+    await syncVideo.play();
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === "videoinput");
+    const selectedId = syncStream.getVideoTracks()[0]?.getSettings().deviceId || deviceId || "";
+    cameraSelect.replaceChildren(...devices.map((device, index) => {
+        const option = new Option(device.label || `Camera ${index + 1}`, device.deviceId);
+        option.selected = device.deviceId === selectedId;
+        return option;
+    }));
+    cameraSelectWrap.hidden = devices.length < 2;
+    scanLoopActive = true;
+}
+
+function closeSyncDialog(): void {
+    stopSyncCamera();
+    syncDialog.close();
+}
+
+async function createSyncPayload(): Promise<string> {
+    if (!state.eventId || !state.records.length) throw new Error("Select an event before syncing.");
+    const statuses: Array<[number, AttendanceStatus]> = [];
+    state.records.forEach((record, index) => {
+        const status = getAttendanceStatus(record);
+        if (status !== AttendanceStatus.UNPROCESSED) statuses.push([index, status]);
+    });
+    const payload: SyncPayload = { v: 1, e: state.eventId, h: await getDatasetHash(), s: statuses };
+    return JSON.stringify(payload);
+}
+
+async function applySyncPayload(raw: string): Promise<void> {
+    const payload = JSON.parse(raw) as Partial<SyncPayload>;
+    if (payload.v !== 1 || payload.e !== state.eventId || typeof payload.h !== "string" || !Array.isArray(payload.s)) {
+        throw new Error("This QR code is not valid for the selected event.");
+    }
+    if (payload.h !== await getDatasetHash()) {
+        throw new Error("The data.csv fingerprint does not match this device.");
+    }
+    discrepancies.clear();
+    let importedCount = 0;
+    payload.s.forEach((entry) => {
+        if (!Array.isArray(entry) || typeof entry[0] !== "number" || !isAttendanceStatus(entry[1]) || !state.records[entry[0]]) return;
+        const record = state.records[entry[0]];
+        const incoming = entry[1];
+        const local = getAttendanceStatus(record);
+        if (local !== AttendanceStatus.UNPROCESSED && local !== incoming) {
+            discrepancies.set(attendanceKey(record), { name: record.name, local, incoming });
+            return;
+        }
+        state.attendance[attendanceKey(record)] = incoming;
+        importedCount += 1;
+    });
+    saveAttendance();
+    syncDiscrepancies.replaceChildren(...[...discrepancies.values()].map(({ name, local, incoming }) => {
+        const item = document.createElement("li");
+        item.textContent = `${name}: this device ${local}, scanned device ${incoming}`;
+        return item;
+    }));
+    renderPreservingScroll();
+    syncSummary.textContent = discrepancies.size
+        ? `Imported ${importedCount}; kept ${discrepancies.size} conflicting status${discrepancies.size === 1 ? "" : "es"}.`
+        : `Imported ${importedCount} status${importedCount === 1 ? "" : "es"} successfully.`;
+    const updatedPayload = await createSyncPayload();
+    await QRCode.toCanvas(syncCanvas, updatedPayload, { errorCorrectionLevel: "M", margin: 2, width: 320 });
+    syncMessage.textContent = "Ready to scan or share the updated QR code.";
+}
 
 async function fetchWithRetry(url: string): Promise<Response> {
     let lastError: unknown;
@@ -711,6 +837,61 @@ resetButton.addEventListener("click", () => {
     saveAttendance();
     render();
 });
+syncAttendanceButton.addEventListener("click", async () => {
+    try {
+        syncMessage.textContent = "Preparing sync QR code and camera...";
+        syncSummary.textContent = "";
+        syncDiscrepancies.replaceChildren();
+        syncCanvas.hidden = false;
+        syncVideo.hidden = false;
+        syncDialog.showModal();
+        const payload = await createSyncPayload();
+        await QRCode.toCanvas(syncCanvas, payload, { errorCorrectionLevel: "M", margin: 2, width: 320 });
+        await startSyncCamera();
+        syncMessage.textContent = "Show this QR code to another device or scan its QR code.";
+        const BarcodeDetectorConstructor = window.BarcodeDetector;
+        const detector = BarcodeDetectorConstructor
+            ? new BarcodeDetectorConstructor({ formats: ["qr_code"] })
+            : null;
+        const scan = async (): Promise<void> => {
+            if (!scanLoopActive || !syncStream || syncVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+            let rawValue: string | undefined;
+            if (detector) {
+                const codes = await detector.detect(syncVideo);
+                rawValue = codes[0]?.rawValue;
+            } else if (syncScanContext) {
+                syncScanCanvas.width = syncVideo.videoWidth;
+                syncScanCanvas.height = syncVideo.videoHeight;
+                syncScanContext.drawImage(syncVideo, 0, 0, syncScanCanvas.width, syncScanCanvas.height);
+                const image = syncScanContext.getImageData(0, 0, syncScanCanvas.width, syncScanCanvas.height);
+                rawValue = jsQR(image.data, image.width, image.height)?.data;
+            }
+            if (rawValue) {
+                const now = Date.now();
+                if (rawValue !== lastScannedPayload || now - lastScannedAt > 1500) {
+                    lastScannedPayload = rawValue;
+                    lastScannedAt = now;
+                    try {
+                        await applySyncPayload(rawValue);
+                    } catch (syncError) {
+                        syncSummary.textContent = syncError instanceof Error ? syncError.message : String(syncError);
+                    }
+                }
+            }
+            requestAnimationFrame(() => { void scan(); });
+        };
+        void scan();
+    } catch (scanError) {
+        syncMessage.textContent = scanError instanceof Error ? scanError.message : String(scanError);
+    }
+});
+cameraSelect.addEventListener("change", () => {
+    void startSyncCamera(cameraSelect.value).catch((scanError) => {
+        syncMessage.textContent = scanError instanceof Error ? scanError.message : String(scanError);
+    });
+});
+closeSyncButton.addEventListener("click", closeSyncDialog);
+syncDialog.addEventListener("cancel", closeSyncDialog);
 
 statusElement.textContent = "Loading events...";
 populateDivisions();
