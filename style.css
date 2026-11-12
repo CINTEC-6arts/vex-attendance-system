@@ -358,6 +358,10 @@ select:focus {
     font-size: 13px;
 }
 
+.sync-summary.sync-error {
+    color: #ff6b78;
+}
+
 .sync-dialog canvas,
 .sync-dialog video {
     display: block;

@@ -194,6 +194,7 @@ async function applySyncPayload(raw: string): Promise<void> {
     syncSummary.textContent = discrepancies.size
         ? `Imported ${importedCount}; kept ${discrepancies.size} conflicting status${discrepancies.size === 1 ? "" : "es"}.`
         : `Imported ${importedCount} status${importedCount === 1 ? "" : "es"} successfully.`;
+    syncSummary.classList.toggle("sync-error", discrepancies.size > 0);
     const updatedPayload = await createSyncPayload();
     await QRCode.toCanvas(syncCanvas, updatedPayload, { errorCorrectionLevel: "M", margin: 2, width: 320 });
     syncMessage.textContent = "Ready to scan or share the updated QR code.";
@@ -841,6 +842,7 @@ syncAttendanceButton.addEventListener("click", async () => {
     try {
         syncMessage.textContent = "Preparing sync QR code and camera...";
         syncSummary.textContent = "";
+        syncSummary.classList.remove("sync-error");
         syncDiscrepancies.replaceChildren();
         syncCanvas.hidden = false;
         syncVideo.hidden = false;
@@ -875,6 +877,7 @@ syncAttendanceButton.addEventListener("click", async () => {
                         await applySyncPayload(rawValue);
                     } catch (syncError) {
                         syncSummary.textContent = syncError instanceof Error ? syncError.message : String(syncError);
+                        syncSummary.classList.add("sync-error");
                     }
                 }
             }
