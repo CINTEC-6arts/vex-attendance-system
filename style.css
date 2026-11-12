@@ -318,6 +318,14 @@ select:focus {
     padding-top: 2px;
 }
 
+.loading-progress {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 4px;
+    margin: -4px 0 0;
+    accent-color: #c83d4b;
+}
+
 .result-count {
     margin: 0;
     color: var(--muted);

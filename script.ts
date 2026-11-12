@@ -54,6 +54,7 @@ const controlToolbar = query<HTMLElement>(".control-toolbar");
 const results = query<HTMLElement>("#results");
 const resultCount = query<HTMLElement>("#result-count");
 const statusElement = query<HTMLElement>("#status");
+const loadingProgress = query<HTMLProgressElement>("#loading-progress");
 const error = query<HTMLElement>("#error");
 const resetButton = query<HTMLButtonElement>("#reset-attendance");
 const toggleTeamsButton = query<HTMLButtonElement>("#toggle-teams");
@@ -69,6 +70,26 @@ const teamAnimationDuration = 260;
 const attendanceStatuses: AttendanceStatus[] = [AttendanceStatus.UNPROCESSED, AttendanceStatus.PRESENT, AttendanceStatus.ABSENT, AttendanceStatus.FLAGGED];
 const isAttendanceStatus = (value: string): value is AttendanceStatus => attendanceStatuses.includes(value as AttendanceStatus);
 const eventListPath = "events.txt";
+const maxFetchAttempts = 3;
+const preloadedImages = new Map<string, string>();
+
+async function fetchWithRetry(url: string): Promise<Response> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxFetchAttempts; attempt += 1) {
+        try {
+            const response = await fetch(url);
+            if (response.ok) return response;
+            lastError = new Error(`${response.status} ${response.statusText}`);
+        } catch (error) {
+            lastError = error;
+        }
+        if (attempt < maxFetchAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+        }
+    }
+    throw new Error(`Failed to fetch ${url} after ${maxFetchAttempts} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+}
+
 function getAssetPaths(eventId: string) {
     return {
         data: `assets/${eventId}/data.csv`,
@@ -189,9 +210,31 @@ function parseCSV(text: string): RecordEntry[] {
 
 async function loadRecords() {
     const assetPaths = getAssetPaths(state.eventId);
-    const response = await fetch(assetPaths.data);
-    if (!response.ok) throw new Error(`Could not load ${assetPaths.data} (${response.status} ${response.statusText}).`);
-    state.records = parseCSV(await response.text());
+    loadingProgress.hidden = false;
+    loadingProgress.value = 0;
+    loadingProgress.max = 1;
+    const response = await fetchWithRetry(assetPaths.data);
+    const records = parseCSV(await response.text());
+    const imageUrls = [...new Set(records.map((record) => `${assetPaths.images}${encodeURIComponent(record.image)}`))];
+    const failedImages: string[] = [];
+    loadingProgress.value = 1;
+    loadingProgress.max = imageUrls.length + 1;
+    await Promise.all(imageUrls.map(async (url) => {
+        try {
+            const imageResponse = await fetchWithRetry(url);
+            preloadedImages.set(url, URL.createObjectURL(await imageResponse.blob()));
+        } catch {
+            failedImages.push(url);
+        } finally {
+            loadingProgress.value += 1;
+        }
+    }));
+    loadingProgress.hidden = true;
+    if (failedImages.length) {
+        error.textContent = `${failedImages.length} image${failedImages.length === 1 ? "" : "s"} could not be preloaded; they will load normally as needed.`;
+        error.hidden = false;
+    }
+    state.records = records;
 }
 
 function getTeamGradient(records: RecordEntry[], width: number | null = null): string {
@@ -393,7 +436,8 @@ function render(): void {
                     const person = personTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
                     const currentStatus = getAttendanceStatus(record);
                     person.classList.add(currentStatus);
-                    child<HTMLImageElement>(person, ".person-image").src = `${getAssetPaths(state.eventId).images}${encodeURIComponent(record.image)}`;
+                    const imageUrl = `${getAssetPaths(state.eventId).images}${encodeURIComponent(record.image)}`;
+                    child<HTMLImageElement>(person, ".person-image").src = preloadedImages.get(imageUrl) || imageUrl;
                     child<HTMLImageElement>(person, ".person-image").alt = display(record.name);
                     person.dataset.teamCode = record.teamCode;
                     person.dataset.division = record.division;
@@ -449,8 +493,7 @@ function populateEvents() {
 }
 
 async function loadEvents() {
-    const response = await fetch(eventListPath);
-    if (!response.ok) throw new Error(`Could not load ${eventListPath} (${response.status} ${response.statusText}).`);
+    const response = await fetchWithRetry(eventListPath);
     const eventIds = (await response.text())
         .split(/\r?\n/)
         .map((eventId) => eventId.trim())
@@ -505,6 +548,7 @@ async function switchEvent(eventId: string) {
         statusElement.textContent = `${state.records.length} total entries`;
         render();
     } catch (loadError) {
+        loadingProgress.hidden = true;
         error.textContent = `Unable to load event records: ${loadError instanceof Error ? loadError.message : String(loadError)}`;
         error.hidden = false;
         statusElement.textContent = "Unable to load event records";
