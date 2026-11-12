@@ -377,7 +377,7 @@ select:focus {
 }
 
 .sync-header .status {
-    margin-top: 3px;
+    margin: 3px 0 18px;
 }
 
 .sync-panels {
@@ -448,7 +448,15 @@ select:focus {
 }
 
 .sync-camera-select {
+    display: grid;
+    gap: 6px;
     margin-top: 12px;
+}
+
+.sync-camera-select .select-arrow {
+    top: auto;
+    bottom: 14px;
+    transform: none;
 }
 
 .sync-review-dialog {
