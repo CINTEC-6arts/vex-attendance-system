@@ -228,6 +228,57 @@
         <template id="team-option-template">
             <option></option>
         </template>
+        <template id="sync-status-tally-template">
+            <div class="sync-status-tally-item">
+                <span class="material-symbols-outlined sync-tally-icon" aria-hidden="true"></span>
+                <strong class="sync-tally-count"></strong>
+                <span class="sync-tally-label"></span>
+            </div>
+        </template>
+        <template id="sync-review-table-template">
+            <table class="sync-review-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Team</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">
+                            <span class="sync-device-heading">
+                                <span>This device</span>
+                                <button id="choose-local-all" class="sync-bulk-button" type="button" aria-label="Use this device for all conflicts" title="Use this device for all conflicts">
+                                    <span class="material-symbols-outlined" aria-hidden="true">done_all</span>
+                                </button>
+                            </span>
+                        </th>
+                        <th scope="col">
+                            <span class="sync-device-heading">
+                                <span>Scanned device</span>
+                                <button id="choose-incoming-all" class="sync-bulk-button" type="button" aria-label="Use scanned device for all conflicts" title="Use scanned device for all conflicts">
+                                    <span class="material-symbols-outlined" aria-hidden="true">done_all</span>
+                                </button>
+                            </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </template>
+        <template id="sync-review-row-template">
+            <tr>
+                <th scope="row" class="sync-review-team-code">
+                    <span class="sync-review-team-number"></span>
+                    <span class="sync-review-division"></span>
+                </th>
+                <td class="sync-review-name">
+                    <span class="sync-review-person"></span>
+                </td>
+                <td class="sync-review-choice-cell">
+                    <button class="sync-choice-button" type="button"></button>
+                </td>
+                <td class="sync-review-choice-cell">
+                    <button class="sync-choice-button" type="button"></button>
+                </td>
+            </tr>
+        </template>
 
         <script type="module" src="./script.ts"></script>
     </body>

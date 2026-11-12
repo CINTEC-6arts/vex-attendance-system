@@ -109,6 +109,9 @@ const personTemplate = query<HTMLTemplateElement>("#person-template");
 const statusButtonTemplate = query<HTMLTemplateElement>("#status-button-template");
 const emptyTemplate = query<HTMLTemplateElement>("#empty-template");
 const teamOptionTemplate = query<HTMLTemplateElement>("#team-option-template");
+const syncStatusTallyTemplate = query<HTMLTemplateElement>("#sync-status-tally-template");
+const syncReviewTableTemplate = query<HTMLTemplateElement>("#sync-review-table-template");
+const syncReviewRowTemplate = query<HTMLTemplateElement>("#sync-review-row-template");
 const expandedTeams = new Set<string>();
 const teamAnimationDuration = 260;
 const attendanceStatuses: AttendanceStatus[] = [AttendanceStatus.UNPROCESSED, AttendanceStatus.PRESENT, AttendanceStatus.ABSENT, AttendanceStatus.FLAGGED];
@@ -209,9 +212,11 @@ async function applySyncPayload(raw: string): Promise<void> {
         [AttendanceStatus.ABSENT, "Absent", "close"],
         [AttendanceStatus.FLAGGED, "Flagged", "flag"],
     ].map(([status, label, icon]) => {
-        const item = document.createElement("div");
-        item.className = `sync-status-tally-item ${status}`;
-        item.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">${icon}</span><strong>${importedCounts.get(status as AttendanceStatus) || 0}</strong><span>${label}</span>`;
+        const item = syncStatusTallyTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
+        item.classList.add(status as string);
+        child<HTMLElement>(item, ".sync-tally-icon").textContent = icon as string;
+        child<HTMLElement>(item, ".sync-tally-count").textContent = String(importedCounts.get(status as AttendanceStatus) || 0);
+        child<HTMLElement>(item, ".sync-tally-label").textContent = label as string;
         return item;
     }));
     const statusIcons: Record<AttendanceStatus, string> = {
@@ -220,39 +225,21 @@ async function applySyncPayload(raw: string): Promise<void> {
         [AttendanceStatus.ABSENT]: "close",
         [AttendanceStatus.FLAGGED]: "flag",
     };
-    const table = document.createElement("table");
-    table.className = "sync-review-table";
-    table.innerHTML = "<thead><tr><th scope=\"col\">Team</th><th scope=\"col\">Name</th><th scope=\"col\"><span class=\"sync-device-heading\"><span>This device</span><button id=\"choose-local-all\" class=\"sync-bulk-button\" type=\"button\" aria-label=\"Use this device for all conflicts\" title=\"Use this device for all conflicts\"><span class=\"material-symbols-outlined\" aria-hidden=\"true\">done_all</span></button></span></th><th scope=\"col\"><span class=\"sync-device-heading\"><span>Scanned device</span><button id=\"choose-incoming-all\" class=\"sync-bulk-button\" type=\"button\" aria-label=\"Use scanned device for all conflicts\" title=\"Use scanned device for all conflicts\"><span class=\"material-symbols-outlined\" aria-hidden=\"true\">done_all</span></button></span></th></tr></thead>";
-    const body = document.createElement("tbody");
+    const table = syncReviewTableTemplate.content.firstElementChild!.cloneNode(true) as HTMLTableElement;
+    const body = child<HTMLTableSectionElement>(table, "tbody");
     [...pendingSyncChoices].forEach(([key, choice]) => {
-        const row = document.createElement("tr");
+        const row = syncReviewRowTemplate.content.firstElementChild!.cloneNode(true) as HTMLTableRowElement;
         const local = getAttendanceStatus(choice.record);
-        const team = document.createElement("th");
-        team.scope = "row";
-        team.className = "sync-review-team-code";
-        const teamCode = document.createElement("span");
-        teamCode.className = "sync-review-team-number";
-        teamCode.textContent = choice.record.teamCode;
-        const division = document.createElement("span");
-        division.className = "sync-review-division";
-        division.textContent = `${choice.record.division} · ${choice.record.organisation}`;
-        team.append(teamCode, division);
-        const name = document.createElement("td");
-        name.className = "sync-review-name";
-        const personName = document.createElement("span");
-        personName.className = "sync-review-person";
-        personName.textContent = choice.record.name;
-        name.append(personName);
-        row.append(team, name);
+        child<HTMLElement>(row, ".sync-review-team-number").textContent = choice.record.teamCode;
+        child<HTMLElement>(row, ".sync-review-division").textContent = `${choice.record.division} · ${choice.record.organisation}`;
+        child<HTMLElement>(row, ".sync-review-person").textContent = choice.record.name;
+        const choiceButtons = row.querySelectorAll<HTMLButtonElement>(".sync-choice-button");
         const options: Array<[string, AttendanceStatus, string]> = [
             ["local", local, "This device"],
             ["incoming", choice.incoming, "Scanned device"],
         ];
-        options.forEach(([source, status, label]) => {
-            const cell = document.createElement("td");
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "sync-choice-button";
+        options.forEach(([source, status, label], index) => {
+            const button = choiceButtons[index];
             button.dataset.syncChoice = key;
             button.dataset.syncSource = source;
             button.dataset.syncStatus = status;
@@ -265,13 +252,10 @@ async function applySyncPayload(raw: string): Promise<void> {
             const statusLabel = document.createElement("span");
             statusLabel.className = "sync-status-label";
             statusLabel.textContent = status;
-            button.append(icon, statusLabel);
-            cell.append(button);
-            row.append(cell);
+            button.replaceChildren(icon, statusLabel);
         });
         body.append(row);
     });
-    table.append(body);
     syncReviewList.replaceChildren(table);
     syncConflictHeading.hidden = false;
     const hasConflicts = pendingSyncChoices.size > 0;
