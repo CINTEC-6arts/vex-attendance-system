@@ -81,6 +81,9 @@ const resultCount = query<HTMLElement>("#result-count");
 const statusElement = query<HTMLElement>("#status");
 const loadingProgress = query<HTMLProgressElement>("#loading-progress");
 const error = query<HTMLElement>("#error");
+const errorDialog = query<HTMLDialogElement>("#error-dialog");
+const errorDialogMessage = query<HTMLElement>("#error-dialog-message");
+const closeErrorButton = query<HTMLButtonElement>("#close-error");
 const resetButton = query<HTMLButtonElement>("#reset-attendance");
 const syncAttendanceButton = query<HTMLButtonElement>("#sync-attendance");
 const syncDialog = query<HTMLDialogElement>("#sync-dialog");
@@ -125,6 +128,11 @@ let lastScannedPayload = "";
 let lastScannedAt = 0;
 const discrepancies = new Map<string, { name: string; local: AttendanceStatus; incoming: AttendanceStatus }>();
 const pendingSyncChoices = new Map<string, { record: RecordEntry; incoming: AttendanceStatus }>();
+
+function showErrorPopup(message: string): void {
+    errorDialogMessage.textContent = message;
+    if (!errorDialog.open) errorDialog.showModal();
+}
 
 async function getDatasetHash(): Promise<string> {
     const canonical = JSON.stringify(state.records);
@@ -430,7 +438,7 @@ async function loadRecords() {
     }));
     loadingProgress.hidden = true;
     if (failedImages.length) {
-        error.textContent = `${failedImages.length} image${failedImages.length === 1 ? "" : "s"} could not be preloaded; they will load normally as needed.`;
+        showErrorPopup(`${failedImages.length} image${failedImages.length === 1 ? "" : "s"} could not be preloaded; they will load normally as needed.`);
         error.hidden = false;
     }
     state.records = records;
@@ -754,8 +762,7 @@ async function switchEvent(eventId: string) {
         render();
     } catch (loadError) {
         loadingProgress.hidden = true;
-        error.textContent = `Unable to load event records: ${loadError instanceof Error ? loadError.message : String(loadError)}`;
-        error.hidden = false;
+        showErrorPopup(`Unable to load event records: ${loadError instanceof Error ? loadError.message : String(loadError)}`);
         statusElement.textContent = "Unable to load event records";
     }
 }
@@ -945,7 +952,7 @@ syncAttendanceButton.addEventListener("click", async () => {
                     try {
                         await applySyncPayload(rawValue);
                     } catch (syncError) {
-                        syncMessage.textContent = syncError instanceof Error ? syncError.message : String(syncError);
+                        showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
                     }
                 }
             }
@@ -953,17 +960,19 @@ syncAttendanceButton.addEventListener("click", async () => {
         };
         void scan();
     } catch (scanError) {
-        syncMessage.textContent = scanError instanceof Error ? scanError.message : String(scanError);
+        showErrorPopup(scanError instanceof Error ? scanError.message : String(scanError));
     }
 });
 cameraSelect.addEventListener("change", () => {
     void startSyncCamera(cameraSelect.value).catch((scanError) => {
-        syncMessage.textContent = scanError instanceof Error ? scanError.message : String(scanError);
+        showErrorPopup(scanError instanceof Error ? scanError.message : String(scanError));
     });
 });
 closeSyncButton.addEventListener("click", closeSyncDialog);
 syncDialog.addEventListener("cancel", closeSyncDialog);
 closeSyncReviewButton.addEventListener("click", () => syncReviewDialog.close());
+closeErrorButton.addEventListener("click", () => errorDialog.close());
+errorDialog.addEventListener("cancel", () => errorDialog.close());
 applySyncReviewButton.addEventListener("click", async () => {
     let appliedCount = 0;
     syncReviewList.querySelectorAll<HTMLButtonElement>(".sync-choice-button[aria-pressed='true']").forEach((button) => {
@@ -1010,7 +1019,6 @@ loadEvents()
         return switchEvent(state.eventId);
     })
     .catch((loadError) => {
-        error.textContent = `Unable to load events: ${loadError instanceof Error ? loadError.message : String(loadError)}`;
-        error.hidden = false;
+        showErrorPopup(`Unable to load events: ${loadError instanceof Error ? loadError.message : String(loadError)}`);
         statusElement.textContent = "Unable to load events";
     });
