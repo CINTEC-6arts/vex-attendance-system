@@ -41,10 +41,22 @@ type EventDefinition = {
     label: string;
 };
 type SyncPayload = {
+    v: 2;
+    e: string;
+    h: string;
+    s: string;
+};
+type LegacySyncPayload = {
     v: 1;
     e: string;
     h: string;
     s: Array<[number, AttendanceStatus]>;
+};
+type ParsedSyncPayload = {
+    v?: number;
+    e?: string;
+    h?: string;
+    s?: string | Array<[number, AttendanceStatus]>;
 };
 
 let events: EventDefinition[] = [];
@@ -131,6 +143,18 @@ let lastScannedAt = 0;
 let lockedSyncOrientation: OrientationLockType | null = null;
 const discrepancies = new Map<string, { name: string; local: AttendanceStatus; incoming: AttendanceStatus }>();
 const pendingSyncChoices = new Map<string, { record: RecordEntry; incoming: AttendanceStatus }>();
+const statusCodes: Record<AttendanceStatus, number> = {
+    [AttendanceStatus.UNPROCESSED]: 0,
+    [AttendanceStatus.PRESENT]: 1,
+    [AttendanceStatus.ABSENT]: 2,
+    [AttendanceStatus.FLAGGED]: 3,
+};
+const codeStatuses: AttendanceStatus[] = [
+    AttendanceStatus.UNPROCESSED,
+    AttendanceStatus.PRESENT,
+    AttendanceStatus.ABSENT,
+    AttendanceStatus.FLAGGED,
+];
 
 function showErrorPopup(message: string): void {
     errorDialogMessage.textContent = message;
@@ -194,13 +218,29 @@ function closeSyncDialog(): void {
 
 async function createSyncPayload(): Promise<string> {
     if (!state.eventId || !state.records.length) throw new Error("Select an event before syncing.");
-    const statuses: Array<[number, AttendanceStatus]> = [];
+    const bytes = new Uint8Array(Math.ceil(state.records.length / 4));
     state.records.forEach((record, index) => {
-        const status = getAttendanceStatus(record);
-        if (status !== AttendanceStatus.UNPROCESSED) statuses.push([index, status]);
+        const statusCode = statusCodes[getAttendanceStatus(record)];
+        bytes[Math.floor(index / 4)] |= statusCode << ((index % 4) * 2);
     });
-    const payload: SyncPayload = { v: 1, e: state.eventId, h: await getDatasetHash(), s: statuses };
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    const packedStatuses = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const payload: SyncPayload = { v: 2, e: state.eventId, h: await getDatasetHash(), s: packedStatuses };
     return JSON.stringify(payload);
+}
+
+function decodePackedStatuses(value: string): Array<[number, AttendanceStatus]> {
+    const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+    const binary = atob(padded);
+    const requiredBytes = Math.ceil(state.records.length / 4);
+    if (binary.length < requiredBytes) throw new Error("This QR code does not contain all attendance statuses.");
+    const statuses: Array<[number, AttendanceStatus]> = [];
+    state.records.forEach((_, index) => {
+        const statusCode = binary.charCodeAt(Math.floor(index / 4)) >> ((index % 4) * 2) & 3;
+        if (statusCode !== statusCodes[AttendanceStatus.UNPROCESSED]) statuses.push([index, codeStatuses[statusCode]]);
+    });
+    return statuses;
 }
 
 async function refreshSyncQr(): Promise<void> {
@@ -209,8 +249,12 @@ async function refreshSyncQr(): Promise<void> {
 }
 
 async function applySyncPayload(raw: string): Promise<void> {
-    const payload = JSON.parse(raw) as Partial<SyncPayload>;
-    if (payload.v !== 1 || payload.e !== state.eventId || typeof payload.h !== "string" || !Array.isArray(payload.s)) {
+    const payload = JSON.parse(raw) as ParsedSyncPayload;
+    const validPayload = payload.e === state.eventId
+        && typeof payload.h === "string"
+        && ((payload.v === 2 && typeof payload.s === "string")
+            || (payload.v === 1 && Array.isArray(payload.s)));
+    if (!validPayload) {
         throw new Error("This QR code is not valid for the selected event.");
     }
     if (payload.h !== await getDatasetHash()) {
@@ -219,7 +263,10 @@ async function applySyncPayload(raw: string): Promise<void> {
     discrepancies.clear();
     pendingSyncChoices.clear();
     const importedCounts = new Map<AttendanceStatus, number>(attendanceStatuses.map((status) => [status, 0]));
-    payload.s.forEach((entry) => {
+    const statuses = payload.v === 2
+        ? decodePackedStatuses(payload.s as string)
+        : payload.s as Array<[number, AttendanceStatus]>;
+    statuses.forEach((entry) => {
         if (!Array.isArray(entry) || typeof entry[0] !== "number" || !isAttendanceStatus(entry[1]) || !state.records[entry[0]]) return;
         const record = state.records[entry[0]];
         const incoming = entry[1];
