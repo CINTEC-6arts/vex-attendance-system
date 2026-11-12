@@ -441,7 +441,7 @@ function populateTeams() {
 }
 
 function populateEvents() {
-    eventFilter.replaceChildren();
+    eventFilter.replaceChildren(new Option("Select event...", ""));
     events.forEach((event) => {
         eventFilter.append(new Option(event.label, event.id));
     });
@@ -460,7 +460,7 @@ async function loadEvents() {
         id,
         label: id.replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
     }));
-    state.eventId = events[0].id;
+    state.eventId = "";
 }
 
 function populateDivisions() {
@@ -485,11 +485,19 @@ function clearEventFilters() {
 }
 
 async function switchEvent(eventId: string) {
-    if (!events.some((event) => event.id === eventId)) return;
+    if (eventId && !events.some((event) => event.id === eventId)) return;
     state.eventId = eventId;
     clearEventFilters();
     results.replaceChildren();
     error.hidden = true;
+    if (!eventId) {
+        state.records = [];
+        populateTeams();
+        eventFilter.value = "";
+        statusElement.textContent = "Select an event to load records";
+        render();
+        return;
+    }
     statusElement.textContent = "Loading event records...";
     try {
         await loadRecords();
@@ -511,8 +519,8 @@ eventFilter.addEventListener("change", (event) => {
     const nextEventId = (event.target as HTMLSelectElement).value;
     if (nextEventId === state.eventId) return;
     const nextEvent = events.find((item) => item.id === nextEventId);
-    if (!nextEvent) return;
-    const confirmed = window.confirm(`Switch to ${nextEvent.label}? Attendance is tracked separately for each event.`);
+    const nextEventLabel = nextEvent?.label || "Select event...";
+    const confirmed = window.confirm(`Switch to ${nextEventLabel}? Attendance is tracked separately for each event.`);
     if (!confirmed) {
         eventFilter.value = state.eventId;
         return;
