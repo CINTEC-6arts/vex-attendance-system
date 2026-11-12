@@ -368,6 +368,8 @@ select:focus {
 .sync-dialog {
     width: min(900px, calc(100vw - 32px));
     max-width: none;
+    max-height: calc(100vh - 24px);
+    overflow: auto;
     padding: 0;
     border: 1px solid #3b4c70;
     border-radius: 22px;
@@ -506,8 +508,8 @@ select:focus {
 .sync-qr-stage canvas,
 .sync-video-stage video {
     display: block;
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
     max-height: none;
     object-fit: contain;
     border-radius: 8px;
@@ -872,7 +874,7 @@ select:focus {
     right: 12px;
 }
 
-@media (max-width: 650px) {
+@media (max-width: 874px) {
     .sync-panels {
         grid-template-columns: 1fr;
     }
