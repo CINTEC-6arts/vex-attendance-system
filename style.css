@@ -161,6 +161,23 @@ select {
     display: block;
 }
 
+.event-select-wrap select {
+    border-color: #8f2935;
+    background: #8f2935;
+    color: #fff5f5;
+}
+
+.event-select-wrap .select-arrow {
+    color: #fff5f5;
+}
+
+.event-select-wrap select:hover,
+.event-select-wrap select:focus {
+    border-color: #ff6b78;
+    background: #c83d4b;
+    box-shadow: 0 0 0 3px rgba(255, 107, 120, 0.28);
+}
+
 .select-arrow {
     position: absolute;
     top: 50%;
