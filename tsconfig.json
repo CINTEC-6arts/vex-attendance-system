@@ -12,10 +12,12 @@
         "strict": false,
         "skipLibCheck": true,
         "types": [
-            "bun"
+            "bun",
+            "node"
         ]
     },
     "include": [
-        "script.ts"
+        "script.ts",
+        "scripts/**/*.ts"
     ]
 }
