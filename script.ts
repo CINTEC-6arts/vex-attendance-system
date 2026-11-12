@@ -94,6 +94,14 @@ const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
 const cameraSelect = query<HTMLSelectElement>("#camera-select");
 const syncDiscrepancies = query<HTMLUListElement>("#sync-discrepancies");
 const closeSyncButton = query<HTMLButtonElement>("#close-sync");
+const syncReviewDialog = query<HTMLDialogElement>("#sync-review-dialog");
+const syncReviewSummary = query<HTMLElement>("#sync-review-summary");
+const syncStatusTally = query<HTMLElement>("#sync-status-tally");
+const syncConflictHeading = query<HTMLElement>("#sync-conflict-heading");
+const syncReviewList = query<HTMLElement>("#sync-review-list");
+const cancelSyncReviewButton = query<HTMLButtonElement>("#cancel-sync-review");
+const closeSyncReviewButton = query<HTMLButtonElement>("#close-sync-review");
+const applySyncReviewButton = query<HTMLButtonElement>("#apply-sync-review");
 const toggleTeamsButton = query<HTMLButtonElement>("#toggle-teams");
 const toggleTeamsIcon = query<HTMLElement>("#toggle-teams-icon");
 const teamTemplate = query<HTMLTemplateElement>("#team-template");
@@ -114,6 +122,7 @@ let scanLoopActive = false;
 let lastScannedPayload = "";
 let lastScannedAt = 0;
 const discrepancies = new Map<string, { name: string; local: AttendanceStatus; incoming: AttendanceStatus }>();
+const pendingSyncChoices = new Map<string, { record: RecordEntry; incoming: AttendanceStatus }>();
 
 async function getDatasetHash(): Promise<string> {
     const canonical = JSON.stringify(state.records);
@@ -162,6 +171,11 @@ async function createSyncPayload(): Promise<string> {
     return JSON.stringify(payload);
 }
 
+async function refreshSyncQr(): Promise<void> {
+    const payload = await createSyncPayload();
+    await QRCode.toCanvas(syncCanvas, payload, { errorCorrectionLevel: "M", margin: 2, width: 320 });
+}
+
 async function applySyncPayload(raw: string): Promise<void> {
     const payload = JSON.parse(raw) as Partial<SyncPayload>;
     if (payload.v !== 1 || payload.e !== state.eventId || typeof payload.h !== "string" || !Array.isArray(payload.s)) {
@@ -171,7 +185,8 @@ async function applySyncPayload(raw: string): Promise<void> {
         throw new Error("The data.csv fingerprint does not match this device.");
     }
     discrepancies.clear();
-    let importedCount = 0;
+    pendingSyncChoices.clear();
+    const importedCounts = new Map<AttendanceStatus, number>(attendanceStatuses.map((status) => [status, 0]));
     payload.s.forEach((entry) => {
         if (!Array.isArray(entry) || typeof entry[0] !== "number" || !isAttendanceStatus(entry[1]) || !state.records[entry[0]]) return;
         const record = state.records[entry[0]];
@@ -179,10 +194,11 @@ async function applySyncPayload(raw: string): Promise<void> {
         const local = getAttendanceStatus(record);
         if (local !== AttendanceStatus.UNPROCESSED && local !== incoming) {
             discrepancies.set(attendanceKey(record), { name: record.name, local, incoming });
+            pendingSyncChoices.set(attendanceKey(record), { record, incoming });
             return;
         }
         state.attendance[attendanceKey(record)] = incoming;
-        importedCount += 1;
+        importedCounts.set(incoming, (importedCounts.get(incoming) || 0) + 1);
     });
     saveAttendance();
     syncDiscrepancies.replaceChildren(...[...discrepancies.values()].map(({ name, local, incoming }) => {
@@ -191,13 +207,46 @@ async function applySyncPayload(raw: string): Promise<void> {
         return item;
     }));
     renderPreservingScroll();
+    const importedCount = [...importedCounts.values()].reduce((total, count) => total + count, 0);
     syncSummary.textContent = discrepancies.size
         ? `Imported ${importedCount}; kept ${discrepancies.size} conflicting status${discrepancies.size === 1 ? "" : "es"}.`
         : `Imported ${importedCount} status${importedCount === 1 ? "" : "es"} successfully.`;
     syncSummary.classList.toggle("sync-error", discrepancies.size > 0);
-    const updatedPayload = await createSyncPayload();
-    await QRCode.toCanvas(syncCanvas, updatedPayload, { errorCorrectionLevel: "M", margin: 2, width: 320 });
-    syncMessage.textContent = "Ready to scan or share the updated QR code.";
+    await refreshSyncQr();
+    syncMessage.textContent = discrepancies.size ? "Review the flagged differences before applying them." : "Ready to scan or share the updated QR code.";
+    syncStatusTally.replaceChildren(...[
+        [AttendanceStatus.PRESENT, "Present", "check"],
+        [AttendanceStatus.ABSENT, "Absent", "close"],
+        [AttendanceStatus.FLAGGED, "Flagged", "flag"],
+    ].map(([status, label, icon]) => {
+        const item = document.createElement("div");
+        item.className = `sync-status-tally-item ${status}`;
+        item.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">${icon}</span><strong>${importedCounts.get(status as AttendanceStatus) || 0}</strong><span>${label}</span>`;
+        return item;
+    }));
+    syncReviewList.replaceChildren(...[...pendingSyncChoices].map(([key, choice]) => {
+            const row = document.createElement("label");
+            row.className = "sync-review-row";
+            const local = getAttendanceStatus(choice.record);
+            const name = document.createElement("span");
+            name.textContent = choice.record.name;
+            const select = document.createElement("select");
+            select.dataset.syncChoice = key;
+            select.append(
+                new Option(`Keep this device: ${local}`, local),
+                new Option(`Use scanned device: ${choice.incoming}`, choice.incoming),
+            );
+            row.append(name, select);
+            return row;
+        }));
+    syncConflictHeading.hidden = !pendingSyncChoices.size;
+    applySyncReviewButton.hidden = !pendingSyncChoices.size;
+    syncReviewSummary.textContent = pendingSyncChoices.size
+        ? `${importedCount} imported successfully. ${pendingSyncChoices.size} conflicting status${pendingSyncChoices.size === 1 ? "" : "es"} need review.`
+        : `${importedCount} status${importedCount === 1 ? "" : "es"} imported successfully.`;
+    // The scanner dialog is modal, so this summary must also enter the top
+    // layer; a non-modal dialog cannot be shown while another modal is open.
+    if (!syncReviewDialog.open) syncReviewDialog.showModal();
 }
 
 async function fetchWithRetry(url: string): Promise<Response> {
@@ -848,7 +897,7 @@ syncAttendanceButton.addEventListener("click", async () => {
         syncVideo.hidden = false;
         syncDialog.showModal();
         const payload = await createSyncPayload();
-        await QRCode.toCanvas(syncCanvas, payload, { errorCorrectionLevel: "M", margin: 2, width: 320 });
+        await refreshSyncQr();
         await startSyncCamera();
         syncMessage.textContent = "Show this QR code to another device or scan its QR code.";
         const BarcodeDetectorConstructor = window.BarcodeDetector;
@@ -895,6 +944,27 @@ cameraSelect.addEventListener("change", () => {
 });
 closeSyncButton.addEventListener("click", closeSyncDialog);
 syncDialog.addEventListener("cancel", closeSyncDialog);
+cancelSyncReviewButton.addEventListener("click", () => {
+    syncReviewDialog.close();
+});
+closeSyncReviewButton.addEventListener("click", () => syncReviewDialog.close());
+applySyncReviewButton.addEventListener("click", async () => {
+    let appliedCount = 0;
+    syncReviewList.querySelectorAll<HTMLSelectElement>("[data-sync-choice]").forEach((select) => {
+        const choice = pendingSyncChoices.get(select.dataset.syncChoice || "");
+        if (!choice || !isAttendanceStatus(select.value)) return;
+        state.attendance[attendanceKey(choice.record)] = select.value;
+        appliedCount += 1;
+    });
+    saveAttendance();
+    renderPreservingScroll();
+    pendingSyncChoices.clear();
+    discrepancies.clear();
+    syncReviewDialog.close();
+    syncSummary.textContent = `Applied ${appliedCount} reviewed status${appliedCount === 1 ? "" : "es"}.`;
+    syncSummary.classList.remove("sync-error");
+    await refreshSyncQr();
+});
 
 statusElement.textContent = "Loading events...";
 populateDivisions();

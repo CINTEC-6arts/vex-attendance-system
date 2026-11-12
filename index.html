@@ -83,17 +83,71 @@
                 <button id="close-sync" class="clear-filters icon-action sync-close" type="button" aria-label="Close sync dialog" title="Close sync dialog">
                     <span class="material-symbols-outlined" aria-hidden="true">close</span>
                 </button>
-                <h2>Sync attendance</h2>
-                <p id="sync-message" class="status">Export this QR code or scan one from the primary device.</p>
+                <header class="sync-header">
+                    <span class="material-symbols-outlined sync-header-icon" aria-hidden="true">sync</span>
+                    <div>
+                        <h2>Sync attendance</h2>
+                        <p id="sync-message" class="status">Share your QR code or scan another device.</p>
+                    </div>
+                </header>
                 <p id="sync-summary" class="sync-summary" aria-live="polite"></p>
-                <label id="camera-select-wrap" class="select-wrap sync-camera-select" hidden>
-                    <span>Camera</span>
-                    <select id="camera-select" aria-label="Choose camera"></select>
-                    <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
-                </label>
+                <div class="sync-panels">
+                    <section class="sync-panel">
+                        <div class="sync-panel-heading">
+                            <span class="material-symbols-outlined" aria-hidden="true">qr_code_2</span>
+                            <div>
+                                <h3>Your attendance</h3>
+                                <p>Let another device scan this code.</p>
+                            </div>
+                        </div>
+                        <div class="sync-qr-stage">
+                            <canvas id="sync-qr" hidden></canvas>
+                        </div>
+                    </section>
+                    <section class="sync-panel">
+                        <div class="sync-panel-heading">
+                            <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
+                            <div>
+                                <h3>Scan a device</h3>
+                                <p>Point your camera at its QR code.</p>
+                            </div>
+                        </div>
+                        <div class="sync-video-stage">
+                            <video id="sync-video" autoplay playsinline hidden></video>
+                            <span class="material-symbols-outlined sync-camera-placeholder" aria-hidden="true">photo_camera</span>
+                        </div>
+                        <label id="camera-select-wrap" class="select-wrap sync-camera-select" hidden>
+                            <span>Camera</span>
+                            <select id="camera-select" aria-label="Choose camera"></select>
+                            <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
+                        </label>
+                    </section>
+                </div>
                 <ul id="sync-discrepancies" class="sync-discrepancies"></ul>
-                <canvas id="sync-qr" hidden></canvas>
-                <video id="sync-video" autoplay playsinline hidden></video>
+            </div>
+        </dialog>
+        <dialog id="sync-review-dialog" class="sync-dialog sync-review-dialog">
+            <div class="sync-dialog-content">
+                <button id="close-sync-review" class="clear-filters icon-action sync-close" type="button" aria-label="Close sync summary" title="Close sync summary">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+                <header class="sync-review-header">
+                    <span class="material-symbols-outlined sync-review-icon" aria-hidden="true">check_circle</span>
+                    <div>
+                        <h2>Sync Summary</h2>
+                        <p id="sync-review-summary" class="status"></p>
+                    </div>
+                </header>
+                <div id="sync-status-tally" class="sync-status-tally" aria-label="Imported status totals"></div>
+                <div id="sync-conflict-heading" class="sync-conflict-heading" hidden>
+                    <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                    <span>Conflicts to resolve</span>
+                </div>
+                <div id="sync-review-list" class="sync-review-list"></div>
+                <div class="sync-review-actions">
+                    <button id="cancel-sync-review" class="action-button secondary" type="button">Close</button>
+                    <button id="apply-sync-review" class="action-button danger" type="button" hidden>Apply choices</button>
+                </div>
             </div>
         </dialog>
 
