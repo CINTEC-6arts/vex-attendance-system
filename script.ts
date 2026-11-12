@@ -606,16 +606,24 @@ toggleTeamsButton.addEventListener("click", () => {
     if (!groups.length) return;
 
     const allExpanded = groups.every((group) => !group.classList.contains("collapsed"));
-    const toolbarBottom = controlToolbar.getBoundingClientRect().bottom;
+    const toolbarHeight = controlToolbar.getBoundingClientRect().height;
+    const organisationHeading = results.querySelector(".organisation-heading");
+    const organisationHeadingHeight = organisationHeading
+        ? organisationHeading.getBoundingClientRect().height
+        : 42;
+    const teamStickyTop = controlToolbar.getBoundingClientRect().top
+        + toolbarHeight
+        + organisationHeadingHeight
+        + 10;
     const anchor = groups.find((group) => {
         const rect = group.getBoundingClientRect();
-        return rect.top >= toolbarBottom && rect.top < window.innerHeight;
+        return rect.top >= teamStickyTop && rect.top < window.innerHeight;
     }) || groups.find((group) => {
         const rect = group.getBoundingClientRect();
-        return rect.bottom > toolbarBottom && rect.top < window.innerHeight;
+        return rect.bottom > teamStickyTop && rect.top < window.innerHeight;
     });
     const anchorOffset = anchor
-        ? anchor.getBoundingClientRect().top - toolbarBottom
+        ? anchor.getBoundingClientRect().top - teamStickyTop
         : 0;
     const targetExpanded = !allExpanded;
 
@@ -625,14 +633,31 @@ toggleTeamsButton.addEventListener("click", () => {
     if (!anchor) return;
     const keepAnchor = () => {
         const currentTop = anchor.getBoundingClientRect().top;
-        const currentToolbarBottom = controlToolbar.getBoundingClientRect().bottom;
-        window.scrollBy(0, currentTop - currentToolbarBottom - anchorOffset);
+        const currentToolbarTop = controlToolbar.getBoundingClientRect().top;
+        const currentToolbarHeight = controlToolbar.getBoundingClientRect().height;
+        const currentOrganisationHeading = results.querySelector(".organisation-heading");
+        const currentOrganisationHeight = currentOrganisationHeading
+            ? currentOrganisationHeading.getBoundingClientRect().height
+            : organisationHeadingHeight;
+        const currentTeamStickyTop = currentToolbarTop
+            + currentToolbarHeight
+            + currentOrganisationHeight
+            + 10;
+        const correction = currentTop - currentTeamStickyTop - anchorOffset;
+        if (Math.abs(correction) < 0.1) return;
+        window.scrollTo({
+            top: Math.max(0, window.scrollY + correction),
+            left: 0,
+            behavior: "auto",
+        });
     };
     const start = performance.now();
     const maintainAnchor = (now) => {
         keepAnchor();
         if (now - start < teamAnimationDuration) {
             requestAnimationFrame(maintainAnchor);
+        } else {
+            keepAnchor();
         }
     };
     requestAnimationFrame(maintainAnchor);

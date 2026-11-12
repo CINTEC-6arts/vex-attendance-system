@@ -351,6 +351,7 @@ mark {
 .results {
     display: grid;
     gap: 16px;
+    overflow-anchor: none;
 }
 
 .organisation-group {
