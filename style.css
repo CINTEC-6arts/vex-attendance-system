@@ -979,7 +979,8 @@ select:focus {
 }
 
 .sync-dialog:has(.sync-back-button) .sync-header {
-    padding-left: 56px;
+    padding-top: 56px;
+    padding-right: 0;
 }
 
 @media (max-width: 874px) {
