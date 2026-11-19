@@ -494,13 +494,6 @@ select:focus {
     line-height: 1.5;
 }
 
-.live-conflict-pending-dialog {
-    border-color: #c89a45;
-}
-
-.live-conflict-pending-dialog .sync-success-icon {
-    color: #ffd166;
-}
 
 .sync-dialog-content {
     position: relative;
