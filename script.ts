@@ -136,6 +136,9 @@ const liveSyncMessage = query<HTMLElement>("#live-sync-message");
 const hostWebrtcButton = query<HTMLButtonElement>("#host-webrtc");
 const joinWebrtcButton = query<HTMLButtonElement>("#join-webrtc");
 const liveSyncStatus = query<HTMLElement>("#live-sync-status");
+const liveSyncSuccessDialog = query<HTMLDialogElement>("#live-sync-success-dialog");
+const liveSyncSuccessMessage = query<HTMLElement>("#live-sync-success-message");
+const closeLiveSyncSuccessButton = query<HTMLButtonElement>("#close-live-sync-success");
 const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
 const cameraSelect = query<HTMLSelectElement>("#camera-select");
 const liveCameraSelectWrap = query<HTMLElement>("#live-camera-select-wrap");
@@ -322,6 +325,11 @@ function setLiveSyncStatus(message: string, connected: boolean = false): void {
     liveSyncStatus.classList.toggle("connected", connected);
 }
 
+function showLiveSyncSuccess(message: string): void {
+    liveSyncSuccessMessage.textContent = message;
+    if (!liveSyncSuccessDialog.open) liveSyncSuccessDialog.showModal();
+}
+
 async function waitForIceGathering(peer: RTCPeerConnection): Promise<void> {
     if (peer.iceGatheringState === "complete") return;
     await new Promise<void>((resolve) => {
@@ -339,7 +347,9 @@ async function waitForIceGathering(peer: RTCPeerConnection): Promise<void> {
 function getLivePeerRole(peer: RTCPeerConnection): void {
     peer.addEventListener("connectionstatechange", () => {
         if (peer.connectionState === "connected") {
-            setLiveSyncStatus(liveRole === "host" ? "Live host connected" : "Connected to live host", true);
+            const message = liveRole === "host" ? "Live host connected" : "Connected to live host";
+            setLiveSyncStatus(message, true);
+            showLiveSyncSuccess(message);
         } else if (peer.connectionState === "disconnected" || peer.connectionState === "failed") {
             setLiveSyncStatus("Live sync disconnected");
         }
@@ -372,7 +382,9 @@ async function receiveLiveSnapshot(raw: string): Promise<void> {
 function configureHostChannel(session: string, channel: RTCDataChannel): void {
     hostChannels.set(session, channel);
     channel.addEventListener("open", () => {
-        setLiveSyncStatus(`Live host: ${hostChannels.size} device${hostChannels.size === 1 ? "" : "s"} connected`, true);
+        const message = `Live host: ${hostChannels.size} device${hostChannels.size === 1 ? "" : "s"} connected`;
+        setLiveSyncStatus(message, true);
+        showLiveSyncSuccess(message);
         void broadcastLiveSnapshot();
     });
     channel.addEventListener("close", () => {
@@ -478,6 +490,7 @@ async function joinLiveHostOffer(raw: string): Promise<void> {
         width: 420,
     });
     liveSyncMessage.textContent = "Live-sync answer ready. Let the host scan this QR code.";
+    showLiveSyncSuccess("Host offer scanned successfully. Show this answer QR to the host.");
 }
 
 async function acceptLiveHostAnswer(raw: string): Promise<void> {
@@ -499,6 +512,7 @@ async function acceptLiveHostAnswer(raw: string): Promise<void> {
     await peer.setRemoteDescription(payload.sdp);
     acceptedHostAnswers.add(payload.session);
     liveSyncMessage.textContent = "Connecting live-sync device...";
+    showLiveSyncSuccess("Answer QR scanned successfully. Connecting to the live device...");
 }
 
 async function handleLiveQr(raw: string): Promise<boolean> {
@@ -1459,6 +1473,8 @@ syncMethodDialog.addEventListener("cancel", () => syncMethodDialog.close());
 closeLiveSyncButton.addEventListener("click", closeLiveSyncDialog);
 liveSyncDialog.addEventListener("cancel", closeLiveSyncDialog);
 backLiveSyncButton.addEventListener("click", () => backToSyncMethods(false));
+closeLiveSyncSuccessButton.addEventListener("click", () => liveSyncSuccessDialog.close());
+liveSyncSuccessDialog.addEventListener("cancel", () => liveSyncSuccessDialog.close());
 closeSyncReviewButton.addEventListener("click", () => syncReviewDialog.close());
 closeErrorButton.addEventListener("click", () => errorDialog.close());
 errorDialog.addEventListener("cancel", () => errorDialog.close());
