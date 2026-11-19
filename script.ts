@@ -57,6 +57,7 @@ type ParsedSyncPayload = {
     e?: string;
     h?: string;
     s?: string | Array<[number, AttendanceStatus]>;
+    c?: string[];
 };
 type LiveOfferPayload = {
     t: "webrtc-offer";
@@ -147,6 +148,9 @@ const liveSyncStatus = query<HTMLElement>("#live-sync-status");
 const liveSyncSuccessDialog = query<HTMLDialogElement>("#live-sync-success-dialog");
 const liveSyncSuccessMessage = query<HTMLElement>("#live-sync-success-message");
 const closeLiveSyncSuccessButton = query<HTMLButtonElement>("#close-live-sync-success");
+const liveConflictPendingDialog = query<HTMLDialogElement>("#live-conflict-pending-dialog");
+const liveConflictPendingMessage = query<HTMLElement>("#live-conflict-pending-message");
+const closeLiveConflictPendingButton = query<HTMLButtonElement>("#close-live-conflict-pending");
 const syncToast = query<HTMLElement>("#sync-toast");
 const syncToastMessage = query<HTMLElement>("#sync-toast-message");
 const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
@@ -330,8 +334,8 @@ async function refreshSyncQr(): Promise<void> {
 const liveSnapshotPrefix = "vex-sync:";
 const liveOfferPrefix = "vex-offer:";
 const liveAnswerPrefix = "vex-answer:";
-const liveOfferCompressedPrefix = "vex-offerc:";
-const liveAnswerCompressedPrefix = "vex-answerc:";
+const liveOfferCompressedPrefix = "vex-o2:";
+const liveAnswerCompressedPrefix = "vex-a2:";
 
 function setLiveSyncStatus(message: string, connected: boolean = false): void {
     liveSyncStatus.textContent = message;
@@ -358,12 +362,35 @@ function base64UrlToBytes(value: string): Uint8Array {
     return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-async function compressLiveQrPayload(payload: LiveOfferPayload | LiveAnswerPayload): Promise<{ prefix: "gzip" | "plain"; value: string }> {
-    const json = JSON.stringify(payload);
-    const bytes = new TextEncoder().encode(json);
-    const CompressionStreamImpl = getCompressionStreamConstructor();
-    if (!CompressionStreamImpl) return { prefix: "plain", value: bytesToBase64Url(bytes) };
+function compactWebRtcSdp(sdp: string): string {
+    return sdp
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => {
+            if (line.startsWith("m=") || line.startsWith("c=")) return true;
+            if (line.startsWith("a=ice-") || line.startsWith("a=fingerprint:")
+                || line.startsWith("a=setup:") || line.startsWith("a=mid:")
+                || line.startsWith("a=rtcp-mux") || line.startsWith("a=group:BUNDLE")) return true;
+            if (line.startsWith("a=candidate:")
+                && line.split(/\s+/).includes("typ")
+                && line.includes(" typ host ")) return true;
+            return false;
+        })
+        .join("\n");
+}
 
+async function compressLiveQrPayload(payload: LiveOfferPayload | LiveAnswerPayload): Promise<{ prefix: "gzip" | "plain"; value: string }> {
+    const CompressionStreamImpl = getCompressionStreamConstructor();
+    if (!CompressionStreamImpl) throw new Error("Gzip QR compression is not supported by this browser.");
+    const compact = [
+        payload.t === "webrtc-offer" ? "o" : "a",
+        payload.e,
+        payload.h,
+        payload.session,
+        payload.sdp.type,
+        compactWebRtcSdp(payload.sdp.sdp || ""),
+    ] as const;
+    const json = JSON.stringify(compact);
     const stream = new Blob([json]).stream().pipeThrough(new CompressionStreamImpl("gzip"));
     return { prefix: "gzip", value: bytesToBase64Url(new Uint8Array(await new Response(stream).arrayBuffer())) };
 }
@@ -379,7 +406,19 @@ async function decompressLiveQrPayload(value: string, compressed: boolean): Prom
     exactBytes.set(bytes);
     const stream = new Blob([exactBytes]).stream().pipeThrough(new DecompressionStreamImpl("gzip"));
     const json = await new Response(stream).text();
-    return JSON.parse(json) as LiveOfferPayload | LiveAnswerPayload;
+    const compact = JSON.parse(json) as [string, string, string, string, "offer" | "answer", string];
+    const [kind, eventId, hashPrefix, session, sdpType, sdp] = compact;
+    if (!["o", "a"].includes(kind)
+        || typeof eventId !== "string"
+        || typeof hashPrefix !== "string"
+        || typeof session !== "string"
+        || typeof sdpType !== "string"
+        || typeof sdp !== "string") {
+        throw new Error("The compressed live-sync QR code is invalid.");
+    }
+    return kind === "o"
+        ? { t: "webrtc-offer", v: 1, e: eventId, h: hashPrefix, session, sdp: { type: sdpType, sdp } }
+        : { t: "webrtc-answer", v: 1, e: eventId, h: hashPrefix, session, sdp: { type: sdpType, sdp } };
 }
 
 function showLiveSyncSuccess(message: string): void {
