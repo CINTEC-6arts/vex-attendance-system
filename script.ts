@@ -149,7 +149,6 @@ const liveSyncSuccessMessage = query<HTMLElement>("#live-sync-success-message");
 const closeLiveSyncSuccessButton = query<HTMLButtonElement>("#close-live-sync-success");
 const liveConflictPendingDialog = query<HTMLDialogElement>("#live-conflict-pending-dialog");
 const liveConflictPendingMessage = query<HTMLElement>("#live-conflict-pending-message");
-const closeLiveConflictPendingButton = query<HTMLButtonElement>("#close-live-conflict-pending");
 const liveSyncIndicator = query<HTMLElement>("#live-sync-indicator");
 const syncToast = query<HTMLElement>("#sync-toast");
 const syncToastMessage = query<HTMLElement>("#sync-toast-message");
@@ -196,6 +195,7 @@ let lockedSyncOrientation: OrientationLockType | null = null;
 let liveRole: "host" | "client" | null = null;
 let liveApplyingSnapshot = false;
 let liveInitialSnapshotPending = false;
+let guestAwaitingConflictResolution = false;
 let liveKeepAliveTimer: number | null = null;
 let clientPeer: RTCPeerConnection | null = null;
 let clientChannel: RTCDataChannel | null = null;
@@ -737,15 +737,17 @@ async function applyLiveSnapshot(raw: string, showChanges: boolean = true, initi
 
     if (!showChanges) return;
 
-    if (!initialGuest && liveConflictPendingDialog.open) {
-        liveConflictPendingDialog.close();
-    }
-
     if (initialGuest && overridden.length > 0) {
+        guestAwaitingConflictResolution = true;
         liveConflictPendingMessage.textContent =
             `${overridden.length} conflicting status${overridden.length === 1 ? "" : "es"} are waiting for the host to resolve.`;
         if (!liveConflictPendingDialog.open) liveConflictPendingDialog.showModal();
         return;
+    }
+
+    if (!initialGuest && guestAwaitingConflictResolution) {
+        guestAwaitingConflictResolution = false;
+        if (liveConflictPendingDialog.open) liveConflictPendingDialog.close();
     }
 
     if (overridden.length > 0) {
@@ -1703,8 +1705,7 @@ liveSyncDialog.addEventListener("cancel", closeLiveSyncDialog);
 backLiveSyncButton.addEventListener("click", () => backToSyncMethods(false));
 closeLiveSyncSuccessButton.addEventListener("click", () => liveSyncSuccessDialog.close());
 liveSyncSuccessDialog.addEventListener("cancel", () => liveSyncSuccessDialog.close());
-closeLiveConflictPendingButton.addEventListener("click", () => liveConflictPendingDialog.close());
-liveConflictPendingDialog.addEventListener("cancel", () => liveConflictPendingDialog.close());
+liveConflictPendingDialog.addEventListener("cancel", (event) => event.preventDefault());
 closeSyncReviewButton.addEventListener("click", () => syncReviewDialog.close());
 closeErrorButton.addEventListener("click", () => errorDialog.close());
 errorDialog.addEventListener("cancel", () => errorDialog.close());
