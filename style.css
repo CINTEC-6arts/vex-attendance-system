@@ -438,11 +438,17 @@ select:focus {
 }
 
 .live-sync-dot {
-    width: 8px;
-    height: 8px;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: #79d8a0;
     box-shadow: 0 0 8px rgba(121, 216, 160, .75);
+    color: #0b1222;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
 }
 
 .live-conflict-pending-dialog {

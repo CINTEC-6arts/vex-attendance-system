@@ -163,6 +163,7 @@ const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
 const cameraSelect = query<HTMLSelectElement>("#camera-select");
 const liveCameraSelectWrap = query<HTMLElement>("#live-camera-select-wrap");
 const liveCameraSelect = query<HTMLSelectElement>("#live-camera-select");
+const liveSyncDeviceCount = query<HTMLElement>("#live-sync-device-count");
 const closeSyncButton = query<HTMLButtonElement>("#close-sync");
 const syncReviewDialog = query<HTMLDialogElement>("#sync-review-dialog");
 const syncReviewSummary = query<HTMLElement>("#sync-review-summary");
@@ -372,6 +373,7 @@ async function refreshSyncQr(): Promise<void> {
 
 const liveSnapshotPrefix = "vex-sync:";
 const liveKeepAlivePrefix = "vex-live:";
+const liveDeviceCountPrefix = "vex-devices:";
 const liveOfferPrefix = "vex-offer:";
 const liveAnswerPrefix = "vex-answer:";
 const liveOfferCompressedPrefix = "vex-o2:";
@@ -462,10 +464,24 @@ function showSyncToast(message: string, hasOverrides: boolean = false): void {
     }, 7000);
 }
 
-function setLiveSyncIndicator(active: boolean, detail: string): void {
+function setLiveSyncIndicator(active: boolean, detail: string, deviceCount: number = 0): void {
     liveSyncIndicator.hidden = !active;
     liveSyncIndicator.setAttribute("aria-label", detail);
     liveSyncIndicator.title = detail;
+    liveSyncDeviceCount.textContent = String(deviceCount);
+}
+
+function broadcastLiveDeviceCount(): void {
+    if (liveRole !== "host") return;
+    if (!hostChannels.size) {
+        setLiveSyncIndicator(false, "Live sync inactive");
+        return;
+    }
+    const count = hostChannels.size + 1;
+    setLiveSyncIndicator(true, `${count} devices connected`, count);
+    hostChannels.forEach((channel) => {
+        if (channel.readyState === "open") channel.send(liveDeviceCountPrefix + count);
+    });
 }
 
 function startLiveKeepAlive(): void {
@@ -506,7 +522,7 @@ function getLivePeerRole(peer: RTCPeerConnection): void {
         if (peer.connectionState === "connected") {
             const message = liveRole === "host" ? "Live host connected" : "Connected to live host";
             setLiveSyncStatus(message, true);
-            setLiveSyncIndicator(true, message);
+            setLiveSyncIndicator(true, message, liveRole === "host" ? hostChannels.size + 1 : 1);
             showLiveSyncSuccess(message);
             startLiveKeepAlive();
         } else if (peer.connectionState === "disconnected" || peer.connectionState === "failed") {
@@ -554,7 +570,8 @@ function configureHostChannel(session: string, channel: RTCDataChannel): void {
     channel.addEventListener("open", () => {
         const message = `Live host: ${hostChannels.size} device${hostChannels.size === 1 ? "" : "s"} connected`;
         setLiveSyncStatus(message, true);
-        setLiveSyncIndicator(true, message);
+        setLiveSyncIndicator(true, message, hostChannels.size);
+        broadcastLiveDeviceCount();
         showLiveSyncSuccess(message);
         liveInitialSnapshotPending = true;
         startLiveKeepAlive();
@@ -563,6 +580,7 @@ function configureHostChannel(session: string, channel: RTCDataChannel): void {
     channel.addEventListener("close", () => {
         hostChannels.delete(session);
         hostPeers.delete(session);
+        broadcastLiveDeviceCount();
         setLiveSyncStatus(hostChannels.size
             ? `Live host: ${hostChannels.size} device${hostChannels.size === 1 ? "" : "s"} connected`
             : "Live sync disconnected");
@@ -654,7 +672,7 @@ async function joinLiveHostOffer(raw: string, compressed: boolean = false): Prom
         clientChannel = event.channel;
         clientChannel.addEventListener("open", () => {
             setLiveSyncStatus("Connected to live host", true);
-            setLiveSyncIndicator(true, "Connected to live host");
+            setLiveSyncIndicator(true, "Connected to live host", 1);
             liveInitialSnapshotPending = true;
             startLiveKeepAlive();
             void broadcastLiveSnapshot();
@@ -667,6 +685,13 @@ async function joinLiveHostOffer(raw: string, compressed: boolean = false): Prom
         clientChannel.addEventListener("message", (messageEvent) => {
             const message = String(messageEvent.data);
             if (message.startsWith(liveKeepAlivePrefix)) return;
+            if (message.startsWith(liveDeviceCountPrefix)) {
+                const count = Number.parseInt(message.slice(liveDeviceCountPrefix.length), 10);
+                if (Number.isFinite(count)) {
+                    setLiveSyncIndicator(true, `${count} devices connected`, count);
+                }
+                return;
+            }
             if (!message.startsWith(liveSnapshotPrefix)) return;
             void receiveLiveSnapshot(message.slice(liveSnapshotPrefix.length)).catch((syncError) => {
                 showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
