@@ -115,16 +115,29 @@ const closeErrorButton = query<HTMLButtonElement>("#close-error");
 const resetButton = query<HTMLButtonElement>("#reset-attendance");
 const syncAttendanceButton = query<HTMLButtonElement>("#sync-attendance");
 const syncDialog = query<HTMLDialogElement>("#sync-dialog");
+const syncMethodDialog = query<HTMLDialogElement>("#sync-method-dialog");
+const liveSyncDialog = query<HTMLDialogElement>("#live-sync-dialog");
+const closeSyncMethodButton = query<HTMLButtonElement>("#close-sync-method");
+const chooseQrSyncButton = query<HTMLButtonElement>("#choose-qr-sync");
+const chooseLiveSyncButton = query<HTMLButtonElement>("#choose-live-sync");
+const closeLiveSyncButton = query<HTMLButtonElement>("#close-live-sync");
 const syncCanvas = query<HTMLCanvasElement>("#sync-qr");
 const syncVideo = query<HTMLVideoElement>("#sync-video");
+const liveSyncCanvas = query<HTMLCanvasElement>("#live-sync-qr");
+const liveSyncVideo = query<HTMLVideoElement>("#live-sync-video");
 const syncScanCanvas = document.createElement("canvas");
 const syncScanContext = syncScanCanvas.getContext("2d", { willReadFrequently: true });
+const liveSyncScanCanvas = document.createElement("canvas");
+const liveSyncScanContext = liveSyncScanCanvas.getContext("2d", { willReadFrequently: true });
 const syncMessage = query<HTMLElement>("#sync-message");
+const liveSyncMessage = query<HTMLElement>("#live-sync-message");
 const hostWebrtcButton = query<HTMLButtonElement>("#host-webrtc");
 const joinWebrtcButton = query<HTMLButtonElement>("#join-webrtc");
 const liveSyncStatus = query<HTMLElement>("#live-sync-status");
 const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
 const cameraSelect = query<HTMLSelectElement>("#camera-select");
+const liveCameraSelectWrap = query<HTMLElement>("#live-camera-select-wrap");
+const liveCameraSelect = query<HTMLSelectElement>("#live-camera-select");
 const closeSyncButton = query<HTMLButtonElement>("#close-sync");
 const syncReviewDialog = query<HTMLDialogElement>("#sync-review-dialog");
 const syncReviewSummary = query<HTMLElement>("#sync-review-summary");
@@ -157,6 +170,7 @@ const maxFetchAttempts = 3;
 const preloadedImages = new Map<string, string>();
 let syncStream: MediaStream | null = null;
 let scanLoopActive = false;
+let liveScanLoopActive = false;
 let lastScannedPayload = "";
 let lastScannedAt = 0;
 let lockedSyncOrientation: OrientationLockType | null = null;
@@ -195,9 +209,11 @@ async function getDatasetHash(): Promise<string> {
 
 function stopSyncCamera(): void {
     scanLoopActive = false;
+    liveScanLoopActive = false;
     syncStream?.getTracks().forEach((track) => track.stop());
     syncStream = null;
     syncVideo.srcObject = null;
+    liveSyncVideo.srcObject = null;
 }
 
 async function lockSyncOrientation(): Promise<void> {
@@ -218,28 +234,41 @@ function unlockSyncOrientation(): void {
     lockedSyncOrientation = null;
 }
 
-async function startSyncCamera(deviceId?: string): Promise<void> {
+async function startSyncCamera(
+    deviceId?: string,
+    video: HTMLVideoElement = syncVideo,
+    select: HTMLSelectElement = cameraSelect,
+    selectWrap: HTMLElement = cameraSelectWrap,
+    live: boolean = false,
+): Promise<void> {
     stopSyncCamera();
     syncStream = await navigator.mediaDevices.getUserMedia({
         video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: "environment" } },
     });
-    syncVideo.srcObject = syncStream;
-    await syncVideo.play();
+    video.srcObject = syncStream;
+    await video.play();
     const devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === "videoinput");
     const selectedId = syncStream.getVideoTracks()[0]?.getSettings().deviceId || deviceId || "";
-    cameraSelect.replaceChildren(...devices.map((device, index) => {
+    select.replaceChildren(...devices.map((device, index) => {
         const option = new Option(device.label || `Camera ${index + 1}`, device.deviceId);
         option.selected = device.deviceId === selectedId;
         return option;
     }));
-    cameraSelectWrap.hidden = devices.length < 2;
-    scanLoopActive = true;
+    selectWrap.hidden = devices.length < 2;
+    if (live) liveScanLoopActive = true;
+    else scanLoopActive = true;
 }
 
 function closeSyncDialog(): void {
     stopSyncCamera();
     unlockSyncOrientation();
     syncDialog.close();
+}
+
+function closeLiveSyncDialog(): void {
+    stopSyncCamera();
+    unlockSyncOrientation();
+    liveSyncDialog.close();
 }
 
 async function createSyncPayload(): Promise<string> {
@@ -355,6 +384,7 @@ function configureHostChannel(session: string, channel: RTCDataChannel): void {
 async function createLiveHostOffer(): Promise<void> {
     if (!state.eventId || !state.records.length) throw new Error("Select an event before hosting live sync.");
     liveRole = "host";
+    liveSyncCanvas.hidden = false;
     const peer = new RTCPeerConnection();
     getLivePeerRole(peer);
     const session = crypto.randomUUID();
@@ -377,12 +407,12 @@ async function createLiveHostOffer(): Promise<void> {
         session,
         sdp: peer.localDescription.toJSON(),
     };
-    await QRCode.toCanvas(syncCanvas, liveOfferPrefix + JSON.stringify(payload), {
+    await QRCode.toCanvas(liveSyncCanvas, liveOfferPrefix + JSON.stringify(payload), {
         errorCorrectionLevel: "L",
         margin: 2,
         width: 420,
     });
-    syncMessage.textContent = "Let a device scan this live-sync offer.";
+    liveSyncMessage.textContent = "Let a device scan this live-sync offer.";
     setLiveSyncStatus("Live host offer ready");
 }
 
@@ -431,12 +461,13 @@ async function joinLiveHostOffer(raw: string): Promise<void> {
         session: payload.session,
         sdp: clientPeer.localDescription.toJSON(),
     };
-    await QRCode.toCanvas(syncCanvas, liveAnswerPrefix + JSON.stringify(answer), {
+    liveSyncCanvas.hidden = false;
+    await QRCode.toCanvas(liveSyncCanvas, liveAnswerPrefix + JSON.stringify(answer), {
         errorCorrectionLevel: "L",
         margin: 2,
         width: 420,
     });
-    syncMessage.textContent = "Live-sync answer ready. Let the host scan this QR code.";
+    liveSyncMessage.textContent = "Live-sync answer ready. Let the host scan this QR code.";
 }
 
 async function acceptLiveHostAnswer(raw: string): Promise<void> {
@@ -457,7 +488,7 @@ async function acceptLiveHostAnswer(raw: string): Promise<void> {
     if (!peer) throw new Error("This live-sync answer does not match an active host offer.");
     await peer.setRemoteDescription(payload.sdp);
     acceptedHostAnswers.add(payload.session);
-    syncMessage.textContent = "Connecting live-sync device...";
+    liveSyncMessage.textContent = "Connecting live-sync device...";
 }
 
 async function handleLiveQr(raw: string): Promise<boolean> {
@@ -1298,62 +1329,124 @@ hostWebrtcButton.addEventListener("click", () => {
 joinWebrtcButton.addEventListener("click", () => {
     liveRole = "client";
     setLiveSyncStatus("Scan a host live-sync QR code");
-    syncMessage.textContent = "Scanning for a host live-sync offer.";
+    liveSyncMessage.textContent = "Scanning for a host live-sync offer.";
 });
-syncAttendanceButton.addEventListener("click", async () => {
-    try {
-        syncMessage.textContent = "Preparing sync QR code and camera...";
-        syncCanvas.hidden = false;
-        syncVideo.hidden = false;
-        syncDialog.showModal();
-        void lockSyncOrientation();
-        const payload = await createSyncPayload();
-        await refreshSyncQr();
-        await startSyncCamera();
-        syncMessage.textContent = "Show this QR code to another device or scan its QR code.";
-        const BarcodeDetectorConstructor = window.BarcodeDetector;
-        const detector = BarcodeDetectorConstructor
-            ? new BarcodeDetectorConstructor({ formats: ["qr_code"] })
-            : null;
-        const scan = async (): Promise<void> => {
-            if (!scanLoopActive || !syncStream || syncVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
-            let rawValue: string | undefined;
-            if (detector) {
-                const codes = await detector.detect(syncVideo);
-                rawValue = codes[0]?.rawValue;
-            } else if (syncScanContext) {
-                syncScanCanvas.width = syncVideo.videoWidth;
-                syncScanCanvas.height = syncVideo.videoHeight;
-                syncScanContext.drawImage(syncVideo, 0, 0, syncScanCanvas.width, syncScanCanvas.height);
-                const image = syncScanContext.getImageData(0, 0, syncScanCanvas.width, syncScanCanvas.height);
-                rawValue = jsQR(image.data, image.width, image.height)?.data;
-            }
-            if (rawValue) {
-                const now = Date.now();
-                if (rawValue !== lastScannedPayload || now - lastScannedAt > 1500) {
-                    lastScannedPayload = rawValue;
-                    lastScannedAt = now;
-                    try {
-                        await applySyncPayload(rawValue);
-                    } catch (syncError) {
-                        showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
-                    }
+syncAttendanceButton.addEventListener("click", () => {
+    syncMethodDialog.showModal();
+});
+
+async function openQrSync(): Promise<void> {
+    syncMethodDialog.close();
+    syncMessage.textContent = "Preparing sync QR code and camera...";
+    syncCanvas.hidden = false;
+    syncVideo.hidden = false;
+    syncDialog.showModal();
+    void lockSyncOrientation();
+    await refreshSyncQr();
+    await startSyncCamera();
+    syncMessage.textContent = "Show this QR code to another device or scan its QR code.";
+    const BarcodeDetectorConstructor = window.BarcodeDetector;
+    const detector = BarcodeDetectorConstructor
+        ? new BarcodeDetectorConstructor({ formats: ["qr_code"] })
+        : null;
+    const scan = async (): Promise<void> => {
+        if (!scanLoopActive || !syncStream || syncVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+        let rawValue: string | undefined;
+        if (detector) {
+            const codes = await detector.detect(syncVideo);
+            rawValue = codes[0]?.rawValue;
+        } else if (syncScanContext) {
+            syncScanCanvas.width = syncVideo.videoWidth;
+            syncScanCanvas.height = syncVideo.videoHeight;
+            syncScanContext.drawImage(syncVideo, 0, 0, syncScanCanvas.width, syncScanCanvas.height);
+            const image = syncScanContext.getImageData(0, 0, syncScanCanvas.width, syncScanCanvas.height);
+            rawValue = jsQR(image.data, image.width, image.height)?.data;
+        }
+        if (rawValue) {
+            const now = Date.now();
+            if (rawValue !== lastScannedPayload || now - lastScannedAt > 1500) {
+                lastScannedPayload = rawValue;
+                lastScannedAt = now;
+                try {
+                    await applySyncPayload(rawValue);
+                } catch (syncError) {
+                    showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
                 }
             }
-            requestAnimationFrame(() => { void scan(); });
-        };
-        void scan();
-    } catch (scanError) {
-        showErrorPopup(scanError instanceof Error ? scanError.message : String(scanError));
-    }
+        }
+        requestAnimationFrame(() => { void scan(); });
+    };
+    void scan();
+}
+
+async function openLiveSync(): Promise<void> {
+    syncMethodDialog.close();
+    liveSyncCanvas.hidden = true;
+    liveSyncVideo.hidden = false;
+    liveSyncDialog.showModal();
+    void lockSyncOrientation();
+    liveSyncMessage.textContent = "Choose whether this device is hosting or joining.";
+    await startSyncCamera(undefined, liveSyncVideo, liveCameraSelect, liveCameraSelectWrap, true);
+    const BarcodeDetectorConstructor = window.BarcodeDetector;
+    const detector = BarcodeDetectorConstructor
+        ? new BarcodeDetectorConstructor({ formats: ["qr_code"] })
+        : null;
+    const scan = async (): Promise<void> => {
+        if (!liveScanLoopActive || !syncStream || liveSyncVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+        let rawValue: string | undefined;
+        if (detector) {
+            const codes = await detector.detect(liveSyncVideo);
+            rawValue = codes[0]?.rawValue;
+        } else if (liveSyncScanContext) {
+            liveSyncScanCanvas.width = liveSyncVideo.videoWidth;
+            liveSyncScanCanvas.height = liveSyncVideo.videoHeight;
+            liveSyncScanContext.drawImage(liveSyncVideo, 0, 0, liveSyncScanCanvas.width, liveSyncScanCanvas.height);
+            const image = liveSyncScanContext.getImageData(0, 0, liveSyncScanCanvas.width, liveSyncScanCanvas.height);
+            rawValue = jsQR(image.data, image.width, image.height)?.data;
+        }
+        if (rawValue) {
+            const now = Date.now();
+            if (rawValue !== lastScannedPayload || now - lastScannedAt > 1500) {
+                lastScannedPayload = rawValue;
+                lastScannedAt = now;
+                try {
+                    await applySyncPayload(rawValue);
+                } catch (syncError) {
+                    showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
+                }
+            }
+        }
+        requestAnimationFrame(() => { void scan(); });
+    };
+    void scan();
+}
+
+chooseQrSyncButton.addEventListener("click", () => {
+    void openQrSync().catch((syncError) => {
+        showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
+    });
+});
+chooseLiveSyncButton.addEventListener("click", () => {
+    void openLiveSync().catch((syncError) => {
+        showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
+    });
 });
 cameraSelect.addEventListener("change", () => {
     void startSyncCamera(cameraSelect.value).catch((scanError) => {
         showErrorPopup(scanError instanceof Error ? scanError.message : String(scanError));
     });
 });
+liveCameraSelect.addEventListener("change", () => {
+    void startSyncCamera(liveCameraSelect.value, liveSyncVideo, liveCameraSelect, liveCameraSelectWrap, true).catch((scanError) => {
+        showErrorPopup(scanError instanceof Error ? scanError.message : String(scanError));
+    });
+});
 closeSyncButton.addEventListener("click", closeSyncDialog);
 syncDialog.addEventListener("cancel", closeSyncDialog);
+closeSyncMethodButton.addEventListener("click", () => syncMethodDialog.close());
+syncMethodDialog.addEventListener("cancel", () => syncMethodDialog.close());
+closeLiveSyncButton.addEventListener("click", closeLiveSyncDialog);
+liveSyncDialog.addEventListener("cancel", closeLiveSyncDialog);
 closeSyncReviewButton.addEventListener("click", () => syncReviewDialog.close());
 closeErrorButton.addEventListener("click", () => errorDialog.close());
 errorDialog.addEventListener("cancel", () => errorDialog.close());

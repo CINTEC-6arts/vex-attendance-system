@@ -491,6 +491,49 @@ select:focus {
     color: #79d8a0;
 }
 
+.sync-method-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.sync-method-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 84px;
+    padding: 16px;
+    border: 1px solid #30415f;
+    border-radius: 14px;
+    background: #18243a;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sync-method-card:hover,
+.sync-method-card:focus-visible {
+    border-color: #50699b;
+    background: #1d2c49;
+}
+
+.sync-method-card>.material-symbols-outlined {
+    color: var(--accent);
+    font-size: 28px;
+}
+
+.sync-method-card strong,
+.sync-method-card small {
+    display: block;
+}
+
+.sync-method-card small {
+    margin-top: 4px;
+    color: var(--muted);
+}
+
 .sync-panels {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -908,6 +951,10 @@ select:focus {
 }
 
 @media (max-width: 874px) {
+    .sync-method-options {
+        grid-template-columns: 1fr;
+    }
+
     .live-sync {
         align-items: flex-start;
         flex-direction: column;

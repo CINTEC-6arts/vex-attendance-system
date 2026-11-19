@@ -102,19 +102,6 @@
                         <p id="sync-message" class="status">Share your QR code or scan another device.</p>
                     </div>
                 </header>
-                <section class="live-sync">
-                    <div class="live-sync-actions">
-                        <button id="host-webrtc" class="action-button secondary" type="button">
-                            <span class="material-symbols-outlined" aria-hidden="true">lan</span>
-                            Host live sync
-                        </button>
-                        <button id="join-webrtc" class="action-button secondary" type="button">
-                            <span class="material-symbols-outlined" aria-hidden="true">cell_wifi</span>
-                            Join live sync
-                        </button>
-                    </div>
-                    <span id="live-sync-status" class="status">Live sync is disconnected</span>
-                </section>
                 <div class="sync-panels">
                     <section class="sync-panel">
                         <div class="sync-panel-heading">
@@ -143,6 +130,95 @@
                         <label id="camera-select-wrap" class="select-wrap sync-camera-select" hidden>
                             <span>Camera</span>
                             <select id="camera-select" aria-label="Choose camera"></select>
+                            <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
+                        </label>
+                    </section>
+                </div>
+            </div>
+        </dialog>
+        <dialog id="sync-method-dialog" class="sync-dialog sync-method-dialog">
+            <div class="sync-dialog-content">
+                <button id="close-sync-method" class="clear-filters icon-action sync-close" type="button" aria-label="Close sync method" title="Close sync method">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+                <header class="sync-header">
+                    <span class="material-symbols-outlined sync-header-icon" aria-hidden="true">sync</span>
+                    <div>
+                        <h2>Choose sync method</h2>
+                        <p class="status">Select QR snapshot sync or live WebRTC sync.</p>
+                    </div>
+                </header>
+                <div class="sync-method-options">
+                    <button id="choose-qr-sync" class="sync-method-card" type="button">
+                        <span class="material-symbols-outlined" aria-hidden="true">qr_code_2</span>
+                        <span>
+                            <strong>QR snapshot</strong>
+                            <small>Scan or share attendance once</small>
+                        </span>
+                    </button>
+                    <button id="choose-live-sync" class="sync-method-card" type="button">
+                        <span class="material-symbols-outlined" aria-hidden="true">lan</span>
+                        <span>
+                            <strong>Live WebRTC</strong>
+                            <small>Pair devices and sync updates live</small>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </dialog>
+        <dialog id="live-sync-dialog" class="sync-dialog">
+            <div class="sync-dialog-content">
+                <button id="close-live-sync" class="clear-filters icon-action sync-close" type="button" aria-label="Close live sync" title="Close live sync">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+                <header class="sync-header">
+                    <span class="material-symbols-outlined sync-header-icon" aria-hidden="true">lan</span>
+                    <div>
+                        <h2>Live WebRTC sync</h2>
+                        <p id="live-sync-message" class="status">Choose whether this device is hosting or joining.</p>
+                    </div>
+                </header>
+                <div class="live-sync">
+                    <div class="live-sync-actions">
+                        <button id="host-webrtc" class="action-button secondary" type="button">
+                            <span class="material-symbols-outlined" aria-hidden="true">lan</span>
+                            Host live sync
+                        </button>
+                        <button id="join-webrtc" class="action-button secondary" type="button">
+                            <span class="material-symbols-outlined" aria-hidden="true">cell_wifi</span>
+                            Join live sync
+                        </button>
+                    </div>
+                    <span id="live-sync-status" class="status">Live sync is disconnected</span>
+                </div>
+                <div class="sync-panels">
+                    <section class="sync-panel">
+                        <div class="sync-panel-heading">
+                            <span class="material-symbols-outlined" aria-hidden="true">qr_code_2</span>
+                            <div>
+                                <h3>Live-sync QR</h3>
+                                <p>Host offer or joining answer.</p>
+                            </div>
+                        </div>
+                        <div class="sync-qr-stage">
+                            <canvas id="live-sync-qr" hidden></canvas>
+                        </div>
+                    </section>
+                    <section class="sync-panel">
+                        <div class="sync-panel-heading">
+                            <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
+                            <div>
+                                <h3>Scan live sync</h3>
+                                <p>Scan an offer or answer QR code.</p>
+                            </div>
+                        </div>
+                        <div class="sync-video-stage">
+                            <video id="live-sync-video" autoplay playsinline hidden></video>
+                            <span class="material-symbols-outlined sync-camera-placeholder" aria-hidden="true">photo_camera</span>
+                        </div>
+                        <label id="live-camera-select-wrap" class="select-wrap sync-camera-select" hidden>
+                            <span>Camera</span>
+                            <select id="live-camera-select" aria-label="Choose camera"></select>
                             <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
                         </label>
                     </section>
