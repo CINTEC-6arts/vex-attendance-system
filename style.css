@@ -609,6 +609,30 @@ select:focus {
     color: #79d8a0;
 }
 
+.live-role-instructions {
+    margin: 4px 0 16px;
+    padding: 12px 14px;
+    border: 1px solid #3b4c70;
+    border-radius: 10px;
+    background: #18243a;
+}
+
+.live-role-instructions strong {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--ink);
+}
+
+.live-role-instructions p {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.live-sync .action-button.secondary:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
 .sync-method-options {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -686,6 +710,30 @@ select:focus {
     margin-top: 1px;
     color: var(--muted);
     font-size: 12px;
+}
+
+.live-qr-refresh {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    margin-left: auto;
+    padding: 0;
+    border: 1px solid #3b4c70;
+    border-radius: 8px;
+    background: #26375f;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.live-qr-refresh:hover,
+.live-qr-refresh:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.live-qr-refresh[hidden] {
+    display: none;
 }
 
 .sync-qr-stage,

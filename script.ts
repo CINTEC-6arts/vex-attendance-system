@@ -143,6 +143,13 @@ const syncMessage = query<HTMLElement>("#sync-message");
 const liveSyncMessage = query<HTMLElement>("#live-sync-message");
 const hostWebrtcButton = query<HTMLButtonElement>("#host-webrtc");
 const joinWebrtcButton = query<HTMLButtonElement>("#join-webrtc");
+const disconnectWebrtcButton = query<HTMLButtonElement>("#disconnect-webrtc");
+const regenerateLiveQrButton = query<HTMLButtonElement>("#regenerate-live-qr");
+const liveRoleInstructions = query<HTMLElement>("#live-role-instructions");
+const liveRoleTitle = query<HTMLElement>("#live-role-title");
+const liveRoleHelp = query<HTMLElement>("#live-role-help");
+const liveQrPanel = query<HTMLElement>("#live-qr-panel");
+const liveScannerPanel = query<HTMLElement>("#live-scanner-panel");
 const liveSyncStatus = query<HTMLElement>("#live-sync-status");
 const liveSyncSuccessDialog = query<HTMLDialogElement>("#live-sync-success-dialog");
 const liveSyncSuccessMessage = query<HTMLElement>("#live-sync-success-message");
@@ -189,6 +196,7 @@ const preloadedImages = new Map<string, string>();
 let syncStream: MediaStream | null = null;
 let scanLoopActive = false;
 let liveScanLoopActive = false;
+let liveScanRunner: (() => void) | null = null;
 let lastScannedPayload = "";
 let lastScannedAt = 0;
 let lockedSyncOrientation: OrientationLockType | null = null;
@@ -287,9 +295,34 @@ function closeSyncDialog(): void {
 }
 
 function closeLiveSyncDialog(): void {
-    stopSyncCamera();
+    disconnectLiveSync();
     unlockSyncOrientation();
     liveSyncDialog.close();
+}
+
+function disconnectLiveSync(): void {
+    clientPeer?.close();
+    clientPeer = null;
+    clientChannel = null;
+    hostPeers.forEach((peer) => peer.close());
+    hostPeers.clear();
+    hostChannels.clear();
+    acceptedHostAnswers.clear();
+    liveRole = null;
+    liveInitialSnapshotPending = false;
+    guestAwaitingConflictResolution = false;
+    setLiveSyncIndicator(false, "Live sync inactive");
+    setLiveSyncStatus("Live sync is disconnected");
+    liveSyncCanvas.hidden = true;
+    liveRoleInstructions.hidden = true;
+    liveQrPanel.hidden = true;
+    liveScannerPanel.hidden = true;
+    liveSyncVideo.hidden = true;
+    regenerateLiveQrButton.hidden = true;
+    liveSyncMessage.textContent = "Choose whether this device is hosting or joining.";
+    disconnectWebrtcButton.disabled = true;
+    hostWebrtcButton.disabled = false;
+    joinWebrtcButton.disabled = false;
 }
 
 function backToSyncMethods(fromQr: boolean): void {
@@ -547,6 +580,15 @@ function configureHostChannel(session: string, channel: RTCDataChannel): void {
 async function createLiveHostOffer(): Promise<void> {
     if (!state.eventId || !state.records.length) throw new Error("Select an event before hosting live sync.");
     liveRole = "host";
+    hostWebrtcButton.disabled = true;
+    joinWebrtcButton.disabled = true;
+    disconnectWebrtcButton.disabled = false;
+    liveRoleInstructions.hidden = false;
+    liveQrPanel.hidden = false;
+    liveScannerPanel.hidden = false;
+    regenerateLiveQrButton.hidden = false;
+    liveRoleTitle.textContent = "Host instructions";
+    liveRoleHelp.textContent = "Connect the guest device to this device's hotspot, then scan this QR code with the guest device.";
     liveSyncCanvas.hidden = false;
     const peer = new RTCPeerConnection();
     getLivePeerRole(peer);
@@ -597,6 +639,14 @@ async function joinLiveHostOffer(raw: string, compressed: boolean = false): Prom
         throw new Error("The live-sync data.csv fingerprint does not match this device.");
     }
     liveRole = "client";
+    hostWebrtcButton.disabled = true;
+    joinWebrtcButton.disabled = true;
+    disconnectWebrtcButton.disabled = false;
+    liveRoleInstructions.hidden = false;
+    liveQrPanel.hidden = false;
+    regenerateLiveQrButton.hidden = true;
+    liveRoleTitle.textContent = "Guest instructions";
+    liveRoleHelp.textContent = "Keep this scanner open. After the host offer is scanned, show the answer QR code to the host.";
     clientPeer?.close();
     clientPeer = new RTCPeerConnection();
     getLivePeerRole(clientPeer);
@@ -1575,15 +1625,38 @@ resetButton.addEventListener("click", () => {
     render();
 });
 hostWebrtcButton.addEventListener("click", () => {
-    void createLiveHostOffer().catch((liveError) => {
+    void startSyncCamera(undefined, liveSyncVideo, liveCameraSelect, liveCameraSelectWrap, true)
+        .then(() => { liveSyncVideo.hidden = false; })
+        .then(() => createLiveHostOffer())
+        .then(() => liveScanRunner?.())
+        .catch((liveError) => {
         setLiveSyncStatus("Live sync could not start");
         showErrorPopup(liveError instanceof Error ? liveError.message : String(liveError));
     });
 });
 joinWebrtcButton.addEventListener("click", () => {
     liveRole = "client";
+    hostWebrtcButton.disabled = true;
+    joinWebrtcButton.disabled = true;
+    disconnectWebrtcButton.disabled = false;
+    liveQrPanel.hidden = true;
+    liveScannerPanel.hidden = false;
+    liveSyncVideo.hidden = false;
+    liveRoleInstructions.hidden = false;
+    regenerateLiveQrButton.hidden = true;
+    liveRoleTitle.textContent = "Guest instructions";
+    liveRoleHelp.textContent = "Connect to the host device's hotspot, then scan the host QR code.";
     setLiveSyncStatus("Scan a host live-sync QR code");
     liveSyncMessage.textContent = "Scanning for a host live-sync offer.";
+    void startSyncCamera(undefined, liveSyncVideo, liveCameraSelect, liveCameraSelectWrap, true)
+        .then(() => liveScanRunner?.())
+        .catch((liveError) => showErrorPopup(liveError instanceof Error ? liveError.message : String(liveError)));
+});
+disconnectWebrtcButton.addEventListener("click", disconnectLiveSync);
+regenerateLiveQrButton.addEventListener("click", () => {
+    void createLiveHostOffer().catch((liveError) => {
+        showErrorPopup(liveError instanceof Error ? liveError.message : String(liveError));
+    });
 });
 syncAttendanceButton.addEventListener("click", () => {
     syncMethodDialog.showModal();
@@ -1635,12 +1708,15 @@ async function openQrSync(): Promise<void> {
 
 async function openLiveSync(): Promise<void> {
     syncMethodDialog.close();
+    disconnectLiveSync();
     liveSyncCanvas.hidden = true;
-    liveSyncVideo.hidden = false;
+    liveSyncVideo.hidden = true;
     liveSyncDialog.showModal();
     void lockSyncOrientation();
     liveSyncMessage.textContent = "Choose whether this device is hosting or joining.";
-    await startSyncCamera(undefined, liveSyncVideo, liveCameraSelect, liveCameraSelectWrap, true);
+    liveQrPanel.hidden = true;
+    liveScannerPanel.hidden = true;
+    liveScanRunner = null;
     const BarcodeDetectorConstructor = window.BarcodeDetector;
     const detector = BarcodeDetectorConstructor
         ? new BarcodeDetectorConstructor({ formats: ["qr_code"] })
@@ -1672,7 +1748,7 @@ async function openLiveSync(): Promise<void> {
         }
         requestAnimationFrame(() => { void scan(); });
     };
-    void scan();
+    liveScanRunner = () => { void scan(); };
 }
 
 chooseQrSyncButton.addEventListener("click", () => {

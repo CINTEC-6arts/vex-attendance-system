@@ -198,29 +198,40 @@
                     <div class="live-sync-actions">
                         <button id="host-webrtc" class="action-button secondary" type="button">
                             <span class="material-symbols-outlined" aria-hidden="true">lan</span>
-                            Host live sync
+                            Host
                         </button>
                         <button id="join-webrtc" class="action-button secondary" type="button">
                             <span class="material-symbols-outlined" aria-hidden="true">cell_wifi</span>
-                            Join live sync
+                            Guest
+                        </button>
+                        <button id="disconnect-webrtc" class="action-button secondary" type="button" disabled>
+                            <span class="material-symbols-outlined" aria-hidden="true">link_off</span>
+                            Disconnect
                         </button>
                     </div>
                     <span id="live-sync-status" class="status">Live sync is disconnected</span>
                 </div>
+                <section id="live-role-instructions" class="live-role-instructions" hidden>
+                    <strong id="live-role-title"></strong>
+                    <p id="live-role-help"></p>
+                </section>
                 <div class="sync-panels">
-                    <section class="sync-panel">
+                    <section id="live-qr-panel" class="sync-panel">
                         <div class="sync-panel-heading">
                             <span class="material-symbols-outlined" aria-hidden="true">qr_code_2</span>
                             <div>
                                 <h3>Live-sync QR</h3>
                                 <p>Host offer or joining answer.</p>
                             </div>
+                            <button id="regenerate-live-qr" class="live-qr-refresh" type="button" aria-label="Generate new QR code" title="Generate new QR code">
+                                <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                            </button>
                         </div>
                         <div class="sync-qr-stage">
                             <canvas id="live-sync-qr" hidden></canvas>
                         </div>
                     </section>
-                    <section class="sync-panel">
+                    <section id="live-scanner-panel" class="sync-panel">
                         <div class="sync-panel-heading">
                             <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
                             <div>

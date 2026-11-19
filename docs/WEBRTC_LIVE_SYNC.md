@@ -8,17 +8,22 @@ The existing QR snapshot format remains the fallback.
 
 ## Pairing
 
-1. Open **Sync attendance** on every device.
-2. On the host, press **Host live sync**.
-3. A device points its camera at the host QR code.
+1. Open **Sync attendance** and choose **WebRTC Live Sync** on every device.
+2. On the host, connect guest devices to the host device's hotspot and press
+   **Host**.
+3. The host shows its QR code and scanner side by side. A guest device points
+   its camera at the host QR code.
 4. The host QR contains an offer and a session identifier.
-5. The joining device presses **Join live sync**, scans the host QR, and displays
-   an answer QR.
+5. The guest presses **Guest**, scans the host QR, and then displays an answer
+   QR.
 6. The host scans the answer QR.
 
 Repeat the pairing sequence once for each joining device. The host does not
 need to create a peer connection to a phone before the phone is on the same
 local network or hotspot.
+
+The host can generate a new pairing QR without disconnecting existing guests.
+Use **Disconnect** to close all live connections from the current device.
 
 ## Signaling payloads
 
