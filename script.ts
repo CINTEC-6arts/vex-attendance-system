@@ -749,13 +749,7 @@ async function applyLiveSnapshot(raw: string, showChanges: boolean = true, initi
     }
 
     if (overridden.length > 0) {
-        const preview = overridden.slice(0, 3).join("; ");
-        const remainder = overridden.length > 3 ? `; +${overridden.length - 3} more` : "";
-        showSyncToast(`${overridden.length} status${overridden.length === 1 ? "" : "es"} overridden: ${preview}${remainder}`, true);
-    } else if (changedCount === 0) {
-        showSyncToast("Attendance is already up to date");
-    } else {
-        showSyncToast(`${changedCount} attendance status${changedCount === 1 ? "" : "es"} updated`);
+        showSyncToast(`${overridden.length} status${overridden.length === 1 ? "" : "es"} overridden`, true);
     }
 }
 
