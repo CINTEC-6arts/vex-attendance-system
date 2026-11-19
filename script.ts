@@ -121,6 +121,8 @@ const closeSyncMethodButton = query<HTMLButtonElement>("#close-sync-method");
 const chooseQrSyncButton = query<HTMLButtonElement>("#choose-qr-sync");
 const chooseLiveSyncButton = query<HTMLButtonElement>("#choose-live-sync");
 const closeLiveSyncButton = query<HTMLButtonElement>("#close-live-sync");
+const backQrSyncButton = query<HTMLButtonElement>("#back-qr-sync");
+const backLiveSyncButton = query<HTMLButtonElement>("#back-live-sync");
 const syncCanvas = query<HTMLCanvasElement>("#sync-qr");
 const syncVideo = query<HTMLVideoElement>("#sync-video");
 const liveSyncCanvas = query<HTMLCanvasElement>("#live-sync-qr");
@@ -269,6 +271,14 @@ function closeLiveSyncDialog(): void {
     stopSyncCamera();
     unlockSyncOrientation();
     liveSyncDialog.close();
+}
+
+function backToSyncMethods(fromQr: boolean): void {
+    stopSyncCamera();
+    unlockSyncOrientation();
+    if (fromQr) syncDialog.close();
+    else liveSyncDialog.close();
+    syncMethodDialog.showModal();
 }
 
 async function createSyncPayload(): Promise<string> {
@@ -1443,10 +1453,12 @@ liveCameraSelect.addEventListener("change", () => {
 });
 closeSyncButton.addEventListener("click", closeSyncDialog);
 syncDialog.addEventListener("cancel", closeSyncDialog);
+backQrSyncButton.addEventListener("click", () => backToSyncMethods(true));
 closeSyncMethodButton.addEventListener("click", () => syncMethodDialog.close());
 syncMethodDialog.addEventListener("cancel", () => syncMethodDialog.close());
 closeLiveSyncButton.addEventListener("click", closeLiveSyncDialog);
 liveSyncDialog.addEventListener("cancel", closeLiveSyncDialog);
+backLiveSyncButton.addEventListener("click", () => backToSyncMethods(false));
 closeSyncReviewButton.addEventListener("click", () => syncReviewDialog.close());
 closeErrorButton.addEventListener("click", () => errorDialog.close());
 errorDialog.addEventListener("cancel", () => errorDialog.close());

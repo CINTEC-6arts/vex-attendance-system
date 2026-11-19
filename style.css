@@ -950,6 +950,38 @@ select:focus {
     right: 12px;
 }
 
+.sync-back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    height: 44px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 9px;
+    background: #26375f;
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sync-back-button:hover,
+.sync-back-button:focus-visible {
+    background: #30415f;
+}
+
+.sync-back-button+.sync-close {
+    right: 12px;
+}
+
+.sync-dialog:has(.sync-back-button) .sync-header {
+    padding-left: 56px;
+}
+
 @media (max-width: 874px) {
     .sync-method-options {
         grid-template-columns: 1fr;
