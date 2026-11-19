@@ -362,23 +362,6 @@ function base64UrlToBytes(value: string): Uint8Array {
     return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-function compactWebRtcSdp(sdp: string): string {
-    return sdp
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => {
-            if (line.startsWith("m=") || line.startsWith("c=")) return true;
-            if (line.startsWith("a=ice-") || line.startsWith("a=fingerprint:")
-                || line.startsWith("a=setup:") || line.startsWith("a=mid:")
-                || line.startsWith("a=rtcp-mux") || line.startsWith("a=group:BUNDLE")) return true;
-            if (line.startsWith("a=candidate:")
-                && line.split(/\s+/).includes("typ")
-                && line.includes(" typ host ")) return true;
-            return false;
-        })
-        .join("\n");
-}
-
 async function compressLiveQrPayload(payload: LiveOfferPayload | LiveAnswerPayload): Promise<{ prefix: "gzip" | "plain"; value: string }> {
     const CompressionStreamImpl = getCompressionStreamConstructor();
     if (!CompressionStreamImpl) throw new Error("Gzip QR compression is not supported by this browser.");
@@ -388,7 +371,7 @@ async function compressLiveQrPayload(payload: LiveOfferPayload | LiveAnswerPaylo
         payload.h,
         payload.session,
         payload.sdp.type,
-        compactWebRtcSdp(payload.sdp.sdp || ""),
+        payload.sdp.sdp || "",
     ] as const;
     const json = JSON.stringify(compact);
     const stream = new Blob([json]).stream().pipeThrough(new CompressionStreamImpl("gzip"));
@@ -541,9 +524,8 @@ async function createLiveHostOffer(): Promise<void> {
         sdp: peer.localDescription.toJSON(),
     };
     const compressed = await compressLiveQrPayload(payload);
-    const offerQr = compressed.prefix === "gzip"
-        ? liveOfferCompressedPrefix + compressed.value
-        : liveOfferPrefix + JSON.stringify(payload);
+    if (compressed.prefix !== "gzip") throw new Error("Gzip QR compression is required for live sync.");
+    const offerQr = liveOfferCompressedPrefix + compressed.value;
     await QRCode.toCanvas(liveSyncCanvas, offerQr, {
         errorCorrectionLevel: "L",
         margin: 2,
@@ -603,9 +585,8 @@ async function joinLiveHostOffer(raw: string, compressed: boolean = false): Prom
     };
     liveSyncCanvas.hidden = false;
     const compressedAnswer = await compressLiveQrPayload(answer);
-    const answerQr = compressedAnswer.prefix === "gzip"
-        ? liveAnswerCompressedPrefix + compressedAnswer.value
-        : liveAnswerPrefix + JSON.stringify(answer);
+    if (compressedAnswer.prefix !== "gzip") throw new Error("Gzip QR compression is required for live sync.");
+    const answerQr = liveAnswerCompressedPrefix + compressedAnswer.value;
     await QRCode.toCanvas(liveSyncCanvas, answerQr, {
         errorCorrectionLevel: "L",
         margin: 2,
