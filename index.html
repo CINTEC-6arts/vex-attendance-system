@@ -102,6 +102,19 @@
                         <p id="sync-message" class="status">Share your QR code or scan another device.</p>
                     </div>
                 </header>
+                <section class="live-sync">
+                    <div class="live-sync-actions">
+                        <button id="host-webrtc" class="action-button secondary" type="button">
+                            <span class="material-symbols-outlined" aria-hidden="true">lan</span>
+                            Host live sync
+                        </button>
+                        <button id="join-webrtc" class="action-button secondary" type="button">
+                            <span class="material-symbols-outlined" aria-hidden="true">cell_wifi</span>
+                            Join live sync
+                        </button>
+                    </div>
+                    <span id="live-sync-status" class="status">Live sync is disconnected</span>
+                </section>
                 <div class="sync-panels">
                     <section class="sync-panel">
                         <div class="sync-panel-heading">

@@ -58,6 +58,22 @@ type ParsedSyncPayload = {
     h?: string;
     s?: string | Array<[number, AttendanceStatus]>;
 };
+type LiveOfferPayload = {
+    t: "webrtc-offer";
+    v: 1;
+    e: string;
+    h: string;
+    session: string;
+    sdp: RTCSessionDescriptionInit;
+};
+type LiveAnswerPayload = {
+    t: "webrtc-answer";
+    v: 1;
+    e: string;
+    h: string;
+    session: string;
+    sdp: RTCSessionDescriptionInit;
+};
 
 let events: EventDefinition[] = [];
 
@@ -104,6 +120,9 @@ const syncVideo = query<HTMLVideoElement>("#sync-video");
 const syncScanCanvas = document.createElement("canvas");
 const syncScanContext = syncScanCanvas.getContext("2d", { willReadFrequently: true });
 const syncMessage = query<HTMLElement>("#sync-message");
+const hostWebrtcButton = query<HTMLButtonElement>("#host-webrtc");
+const joinWebrtcButton = query<HTMLButtonElement>("#join-webrtc");
+const liveSyncStatus = query<HTMLElement>("#live-sync-status");
 const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
 const cameraSelect = query<HTMLSelectElement>("#camera-select");
 const closeSyncButton = query<HTMLButtonElement>("#close-sync");
@@ -141,6 +160,13 @@ let scanLoopActive = false;
 let lastScannedPayload = "";
 let lastScannedAt = 0;
 let lockedSyncOrientation: OrientationLockType | null = null;
+let liveRole: "host" | "client" | null = null;
+let liveApplyingSnapshot = false;
+let clientPeer: RTCPeerConnection | null = null;
+let clientChannel: RTCDataChannel | null = null;
+const hostPeers = new Map<string, RTCPeerConnection>();
+const hostChannels = new Map<string, RTCDataChannel>();
+const acceptedHostAnswers = new Set<string>();
 const discrepancies = new Map<string, { name: string; local: AttendanceStatus; incoming: AttendanceStatus }>();
 const pendingSyncChoices = new Map<string, { record: RecordEntry; incoming: AttendanceStatus }>();
 const statusCodes: Record<AttendanceStatus, number> = {
@@ -248,7 +274,210 @@ async function refreshSyncQr(): Promise<void> {
     await QRCode.toCanvas(syncCanvas, payload, { errorCorrectionLevel: "M", margin: 2, width: 320 });
 }
 
+const liveSnapshotPrefix = "vex-sync:";
+const liveOfferPrefix = "vex-offer:";
+const liveAnswerPrefix = "vex-answer:";
+
+function setLiveSyncStatus(message: string, connected: boolean = false): void {
+    liveSyncStatus.textContent = message;
+    liveSyncStatus.classList.toggle("connected", connected);
+}
+
+async function waitForIceGathering(peer: RTCPeerConnection): Promise<void> {
+    if (peer.iceGatheringState === "complete") return;
+    await new Promise<void>((resolve) => {
+        const timeout = window.setTimeout(() => resolve(), 2500);
+        const checkComplete = (): void => {
+            if (peer.iceGatheringState !== "complete") return;
+            window.clearTimeout(timeout);
+            peer.removeEventListener("icegatheringstatechange", checkComplete);
+            resolve();
+        };
+        peer.addEventListener("icegatheringstatechange", checkComplete);
+    });
+}
+
+function getLivePeerRole(peer: RTCPeerConnection): void {
+    peer.addEventListener("connectionstatechange", () => {
+        if (peer.connectionState === "connected") {
+            setLiveSyncStatus(liveRole === "host" ? "Live host connected" : "Connected to live host", true);
+        } else if (peer.connectionState === "disconnected" || peer.connectionState === "failed") {
+            setLiveSyncStatus("Live sync disconnected");
+        }
+    });
+}
+
+async function broadcastLiveSnapshot(): Promise<void> {
+    if (liveApplyingSnapshot) return;
+    const snapshot = await createSyncPayload();
+    const message = liveSnapshotPrefix + snapshot;
+    if (liveRole === "host") {
+        hostChannels.forEach((channel) => {
+            if (channel.readyState === "open") channel.send(message);
+        });
+    } else if (clientChannel?.readyState === "open") {
+        clientChannel.send(message);
+    }
+}
+
+async function receiveLiveSnapshot(raw: string): Promise<void> {
+    liveApplyingSnapshot = true;
+    try {
+        await applySyncPayload(raw);
+    } finally {
+        liveApplyingSnapshot = false;
+    }
+    if (liveRole === "host") await broadcastLiveSnapshot();
+}
+
+function configureHostChannel(session: string, channel: RTCDataChannel): void {
+    hostChannels.set(session, channel);
+    channel.addEventListener("open", () => {
+        setLiveSyncStatus(`Live host: ${hostChannels.size} device${hostChannels.size === 1 ? "" : "s"} connected`, true);
+        void broadcastLiveSnapshot();
+    });
+    channel.addEventListener("close", () => {
+        hostChannels.delete(session);
+        hostPeers.delete(session);
+        setLiveSyncStatus(hostChannels.size
+            ? `Live host: ${hostChannels.size} device${hostChannels.size === 1 ? "" : "s"} connected`
+            : "Live sync disconnected");
+    });
+    channel.addEventListener("message", (event) => {
+        const message = String(event.data);
+        if (!message.startsWith(liveSnapshotPrefix)) return;
+        void receiveLiveSnapshot(message.slice(liveSnapshotPrefix.length)).catch((syncError) => {
+            showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
+        });
+    });
+}
+
+async function createLiveHostOffer(): Promise<void> {
+    if (!state.eventId || !state.records.length) throw new Error("Select an event before hosting live sync.");
+    liveRole = "host";
+    const peer = new RTCPeerConnection();
+    getLivePeerRole(peer);
+    const session = crypto.randomUUID();
+    const channel = peer.createDataChannel("attendance");
+    configureHostChannel(session, channel);
+    hostPeers.set(session, peer);
+    peer.addEventListener("connectionstatechange", () => {
+        if (peer.connectionState === "failed" || peer.connectionState === "closed") {
+            hostPeers.delete(session);
+        }
+    });
+    await peer.setLocalDescription(await peer.createOffer());
+    await waitForIceGathering(peer);
+    if (!peer.localDescription) throw new Error("Live sync could not create an offer.");
+    const payload: LiveOfferPayload = {
+        t: "webrtc-offer",
+        v: 1,
+        e: state.eventId,
+        h: await getDatasetHash(),
+        session,
+        sdp: peer.localDescription.toJSON(),
+    };
+    await QRCode.toCanvas(syncCanvas, liveOfferPrefix + JSON.stringify(payload), {
+        errorCorrectionLevel: "L",
+        margin: 2,
+        width: 420,
+    });
+    syncMessage.textContent = "Let a device scan this live-sync offer.";
+    setLiveSyncStatus("Live host offer ready");
+}
+
+async function joinLiveHostOffer(raw: string): Promise<void> {
+    const payload = JSON.parse(raw) as LiveOfferPayload;
+    if (payload.t !== "webrtc-offer"
+        || payload.v !== 1
+        || payload.e !== state.eventId
+        || typeof payload.session !== "string"
+        || !payload.sdp) {
+        throw new Error("This live-sync offer is not valid for the selected event.");
+    }
+    if (payload.h !== await getDatasetHash()) {
+        throw new Error("The live-sync data.csv fingerprint does not match this device.");
+    }
+    liveRole = "client";
+    clientPeer?.close();
+    clientPeer = new RTCPeerConnection();
+    getLivePeerRole(clientPeer);
+    clientPeer.addEventListener("datachannel", (event) => {
+        clientChannel = event.channel;
+        clientChannel.addEventListener("open", () => {
+            setLiveSyncStatus("Connected to live host", true);
+            void broadcastLiveSnapshot();
+        });
+        clientChannel.addEventListener("close", () => {
+            setLiveSyncStatus("Live sync disconnected");
+        });
+        clientChannel.addEventListener("message", (messageEvent) => {
+            const message = String(messageEvent.data);
+            if (!message.startsWith(liveSnapshotPrefix)) return;
+            void receiveLiveSnapshot(message.slice(liveSnapshotPrefix.length)).catch((syncError) => {
+                showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
+            });
+        });
+    });
+    await clientPeer.setRemoteDescription(payload.sdp);
+    await clientPeer.setLocalDescription(await clientPeer.createAnswer());
+    await waitForIceGathering(clientPeer);
+    if (!clientPeer.localDescription) throw new Error("Live sync could not create an answer.");
+    const answer: LiveAnswerPayload = {
+        t: "webrtc-answer",
+        v: 1,
+        e: state.eventId,
+        h: await getDatasetHash(),
+        session: payload.session,
+        sdp: clientPeer.localDescription.toJSON(),
+    };
+    await QRCode.toCanvas(syncCanvas, liveAnswerPrefix + JSON.stringify(answer), {
+        errorCorrectionLevel: "L",
+        margin: 2,
+        width: 420,
+    });
+    syncMessage.textContent = "Live-sync answer ready. Let the host scan this QR code.";
+}
+
+async function acceptLiveHostAnswer(raw: string): Promise<void> {
+    if (liveRole !== "host") throw new Error("This device is not hosting live sync.");
+    const payload = JSON.parse(raw) as LiveAnswerPayload;
+    if (payload.t !== "webrtc-answer"
+        || payload.v !== 1
+        || payload.e !== state.eventId
+        || typeof payload.session !== "string"
+        || !payload.sdp) {
+        throw new Error("This live-sync answer is not valid.");
+    }
+    if (payload.h !== await getDatasetHash()) {
+        throw new Error("The live-sync data.csv fingerprint does not match this device.");
+    }
+    if (acceptedHostAnswers.has(payload.session)) return;
+    const peer = hostPeers.get(payload.session);
+    if (!peer) throw new Error("This live-sync answer does not match an active host offer.");
+    await peer.setRemoteDescription(payload.sdp);
+    acceptedHostAnswers.add(payload.session);
+    syncMessage.textContent = "Connecting live-sync device...";
+}
+
+async function handleLiveQr(raw: string): Promise<boolean> {
+    if (raw.startsWith(liveOfferPrefix)) {
+        await joinLiveHostOffer(raw.slice(liveOfferPrefix.length));
+        return true;
+    }
+    if (raw.startsWith(liveAnswerPrefix)) {
+        await acceptLiveHostAnswer(raw.slice(liveAnswerPrefix.length));
+        return true;
+    }
+    return false;
+}
+
 async function applySyncPayload(raw: string): Promise<void> {
+    if (await handleLiveQr(raw)) return;
+    if (raw.startsWith(liveSnapshotPrefix)) {
+        await receiveLiveSnapshot(raw.slice(liveSnapshotPrefix.length));
+        return;
+    }
     const payload = JSON.parse(raw) as ParsedSyncPayload;
     const validPayload = payload.e === state.eventId
         && typeof payload.h === "string"
@@ -439,6 +668,7 @@ function getAttendanceStatus(record) {
 
 function saveAttendance() {
     localStorage.setItem("attendance-status", JSON.stringify(state.attendance));
+    if (!liveApplyingSnapshot) void broadcastLiveSnapshot();
 }
 
 function display(value) {
@@ -1058,6 +1288,17 @@ resetButton.addEventListener("click", () => {
     state.records.forEach((record) => { delete state.attendance[attendanceKey(record)]; });
     saveAttendance();
     render();
+});
+hostWebrtcButton.addEventListener("click", () => {
+    void createLiveHostOffer().catch((liveError) => {
+        setLiveSyncStatus("Live sync could not start");
+        showErrorPopup(liveError instanceof Error ? liveError.message : String(liveError));
+    });
+});
+joinWebrtcButton.addEventListener("click", () => {
+    liveRole = "client";
+    setLiveSyncStatus("Scan a host live-sync QR code");
+    syncMessage.textContent = "Scanning for a host live-sync offer.";
 });
 syncAttendanceButton.addEventListener("click", async () => {
     try {
