@@ -147,6 +147,10 @@ const liveSyncStatus = query<HTMLElement>("#live-sync-status");
 const liveSyncSuccessDialog = query<HTMLDialogElement>("#live-sync-success-dialog");
 const liveSyncSuccessMessage = query<HTMLElement>("#live-sync-success-message");
 const closeLiveSyncSuccessButton = query<HTMLButtonElement>("#close-live-sync-success");
+const liveConflictPendingDialog = query<HTMLDialogElement>("#live-conflict-pending-dialog");
+const liveConflictPendingMessage = query<HTMLElement>("#live-conflict-pending-message");
+const closeLiveConflictPendingButton = query<HTMLButtonElement>("#close-live-conflict-pending");
+const liveSyncIndicator = query<HTMLElement>("#live-sync-indicator");
 const syncToast = query<HTMLElement>("#sync-toast");
 const syncToastMessage = query<HTMLElement>("#sync-toast-message");
 const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
@@ -192,6 +196,7 @@ let lockedSyncOrientation: OrientationLockType | null = null;
 let liveRole: "host" | "client" | null = null;
 let liveApplyingSnapshot = false;
 let liveInitialSnapshotPending = false;
+let liveKeepAliveTimer: number | null = null;
 let clientPeer: RTCPeerConnection | null = null;
 let clientChannel: RTCDataChannel | null = null;
 const hostPeers = new Map<string, RTCPeerConnection>();
@@ -333,6 +338,7 @@ async function refreshSyncQr(): Promise<void> {
 }
 
 const liveSnapshotPrefix = "vex-sync:";
+const liveKeepAlivePrefix = "vex-live:";
 const liveOfferPrefix = "vex-offer:";
 const liveAnswerPrefix = "vex-answer:";
 const liveOfferCompressedPrefix = "vex-o2:";
@@ -423,6 +429,31 @@ function showSyncToast(message: string, hasOverrides: boolean = false): void {
     }, 7000);
 }
 
+function setLiveSyncIndicator(active: boolean, detail: string): void {
+    liveSyncIndicator.hidden = !active;
+    liveSyncIndicator.setAttribute("aria-label", detail);
+    liveSyncIndicator.title = detail;
+}
+
+function startLiveKeepAlive(): void {
+    if (liveKeepAliveTimer !== null) window.clearInterval(liveKeepAliveTimer);
+    liveKeepAliveTimer = window.setInterval(() => {
+        if (liveRole === "host") {
+            hostChannels.forEach((channel) => {
+                if (channel.readyState === "open") channel.send(liveKeepAlivePrefix + "ping");
+            });
+        } else if (clientChannel?.readyState === "open") {
+            clientChannel.send(liveKeepAlivePrefix + "ping");
+        }
+    }, 60000);
+}
+
+function stopLiveKeepAlive(): void {
+    if (liveKeepAliveTimer === null) return;
+    window.clearInterval(liveKeepAliveTimer);
+    liveKeepAliveTimer = null;
+}
+
 async function waitForIceGathering(peer: RTCPeerConnection): Promise<void> {
     if (peer.iceGatheringState === "complete") return;
     await new Promise<void>((resolve) => {
@@ -442,9 +473,13 @@ function getLivePeerRole(peer: RTCPeerConnection): void {
         if (peer.connectionState === "connected") {
             const message = liveRole === "host" ? "Live host connected" : "Connected to live host";
             setLiveSyncStatus(message, true);
+            setLiveSyncIndicator(true, message);
             showLiveSyncSuccess(message);
+            startLiveKeepAlive();
         } else if (peer.connectionState === "disconnected" || peer.connectionState === "failed") {
             setLiveSyncStatus("Live sync disconnected");
+            setLiveSyncIndicator(false, "Live sync inactive");
+            stopLiveKeepAlive();
         }
     });
 }
@@ -466,7 +501,11 @@ async function receiveLiveSnapshot(raw: string): Promise<void> {
     liveApplyingSnapshot = true;
     try {
         if (liveInitialSnapshotPending) {
-            await applySyncPayload(raw, true);
+            if (liveRole === "host") {
+                await applySyncPayload(raw, true);
+            } else {
+                await applyLiveSnapshot(raw, true, true);
+            }
         } else {
             await applyLiveSnapshot(raw, true);
         }
@@ -482,8 +521,10 @@ function configureHostChannel(session: string, channel: RTCDataChannel): void {
     channel.addEventListener("open", () => {
         const message = `Live host: ${hostChannels.size} device${hostChannels.size === 1 ? "" : "s"} connected`;
         setLiveSyncStatus(message, true);
+        setLiveSyncIndicator(true, message);
         showLiveSyncSuccess(message);
         liveInitialSnapshotPending = true;
+        startLiveKeepAlive();
         void broadcastLiveSnapshot();
     });
     channel.addEventListener("close", () => {
@@ -495,6 +536,7 @@ function configureHostChannel(session: string, channel: RTCDataChannel): void {
     });
     channel.addEventListener("message", (event) => {
         const message = String(event.data);
+        if (message.startsWith(liveKeepAlivePrefix)) return;
         if (!message.startsWith(liveSnapshotPrefix)) return;
         void receiveLiveSnapshot(message.slice(liveSnapshotPrefix.length)).catch((syncError) => {
             showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
@@ -562,14 +604,19 @@ async function joinLiveHostOffer(raw: string, compressed: boolean = false): Prom
         clientChannel = event.channel;
         clientChannel.addEventListener("open", () => {
             setLiveSyncStatus("Connected to live host", true);
+            setLiveSyncIndicator(true, "Connected to live host");
             liveInitialSnapshotPending = true;
+            startLiveKeepAlive();
             void broadcastLiveSnapshot();
         });
         clientChannel.addEventListener("close", () => {
             setLiveSyncStatus("Live sync disconnected");
+            setLiveSyncIndicator(false, "Live sync inactive");
+            stopLiveKeepAlive();
         });
         clientChannel.addEventListener("message", (messageEvent) => {
             const message = String(messageEvent.data);
+            if (message.startsWith(liveKeepAlivePrefix)) return;
             if (!message.startsWith(liveSnapshotPrefix)) return;
             void receiveLiveSnapshot(message.slice(liveSnapshotPrefix.length)).catch((syncError) => {
                 showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
@@ -645,7 +692,7 @@ async function handleLiveQr(raw: string): Promise<boolean> {
     return false;
 }
 
-async function applyLiveSnapshot(raw: string, showChanges: boolean = true): Promise<void> {
+async function applyLiveSnapshot(raw: string, showChanges: boolean = true, initialGuest: boolean = false): Promise<void> {
     const payload = JSON.parse(raw) as ParsedSyncPayload;
     const validPayload = payload.e === state.eventId
         && typeof payload.h === "string"
@@ -672,6 +719,11 @@ async function applyLiveSnapshot(raw: string, showChanges: boolean = true): Prom
     state.records.forEach((record, index) => {
         const incoming = incomingStatuses.get(index) || AttendanceStatus.UNPROCESSED;
         const local = getAttendanceStatus(record);
+        if (initialGuest && local !== incoming) {
+            overridden.push(`${record.name}: ${local} -> ${incoming}`);
+            changedCount += 1;
+            return;
+        }
         if (local !== incoming) {
             overridden.push(`${record.name}: ${local} -> ${incoming}`);
             changedCount += 1;
@@ -684,6 +736,17 @@ async function applyLiveSnapshot(raw: string, showChanges: boolean = true): Prom
     await refreshSyncQr();
 
     if (!showChanges) return;
+
+    if (!initialGuest && liveConflictPendingDialog.open) {
+        liveConflictPendingDialog.close();
+    }
+
+    if (initialGuest && overridden.length > 0) {
+        liveConflictPendingMessage.textContent =
+            `${overridden.length} conflicting status${overridden.length === 1 ? "" : "es"} are waiting for the host to resolve.`;
+        if (!liveConflictPendingDialog.open) liveConflictPendingDialog.showModal();
+        return;
+    }
 
     if (overridden.length > 0) {
         const preview = overridden.slice(0, 3).join("; ");
@@ -1646,6 +1709,8 @@ liveSyncDialog.addEventListener("cancel", closeLiveSyncDialog);
 backLiveSyncButton.addEventListener("click", () => backToSyncMethods(false));
 closeLiveSyncSuccessButton.addEventListener("click", () => liveSyncSuccessDialog.close());
 liveSyncSuccessDialog.addEventListener("cancel", () => liveSyncSuccessDialog.close());
+closeLiveConflictPendingButton.addEventListener("click", () => liveConflictPendingDialog.close());
+liveConflictPendingDialog.addEventListener("cancel", () => liveConflictPendingDialog.close());
 closeSyncReviewButton.addEventListener("click", () => syncReviewDialog.close());
 closeErrorButton.addEventListener("click", () => errorDialog.close());
 errorDialog.addEventListener("cancel", () => errorDialog.close());

@@ -385,7 +385,7 @@ select:focus {
 .sync-toast {
     position: fixed;
     z-index: 10000;
-    left: 50%;
+    right: 20px;
     bottom: 20px;
     display: flex;
     align-items: center;
@@ -397,7 +397,7 @@ select:focus {
     background: #18243a;
     color: var(--ink);
     box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
-    transform: translateX(-50%);
+    transform: none;
     font-size: 13px;
     line-height: 1.35;
 }
@@ -417,6 +417,48 @@ select:focus {
 
 .sync-toast.has-overrides .sync-toast-icon {
     color: #ffd166;
+}
+
+.live-sync-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 44px;
+    padding: 0 8px;
+    border: 1px solid #3f7e60;
+    border-radius: 9px;
+    background: #18243a;
+    color: #79d8a0;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.live-sync-indicator[hidden] {
+    display: none;
+}
+
+.live-sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #79d8a0;
+    box-shadow: 0 0 8px rgba(121, 216, 160, .75);
+}
+
+.live-conflict-pending-dialog {
+    border-color: #c89a45;
+}
+
+.live-conflict-pending-dialog .sync-success-icon {
+    color: #ffd166;
+}
+
+@media (max-width: 874px) {
+    .sync-toast {
+        right: 12px;
+        bottom: 12px;
+        max-width: calc(100vw - 24px);
+    }
 }
 
 .error-dialog {

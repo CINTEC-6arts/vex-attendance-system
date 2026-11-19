@@ -35,6 +35,10 @@
                             <button id="sync-attendance" class="clear-filters icon-action" type="button" aria-label="Sync attendance" title="Sync attendance">
                                 <span class="material-symbols-outlined" aria-hidden="true">sync</span>
                             </button>
+                            <span id="live-sync-indicator" class="live-sync-indicator" hidden aria-label="Live sync inactive" title="Live sync inactive">
+                                <span class="live-sync-dot" aria-hidden="true"></span>
+                                <span class="live-sync-indicator-label">Live</span>
+                            </span>
                         </div>
                         <button id="toggle-teams" class="clear-filters icon-action" type="button" aria-label="Expand all teams" title="Expand all teams">
                             <span id="toggle-teams-icon" class="material-symbols-outlined" aria-hidden="true">expand_content</span>
@@ -255,6 +259,16 @@
                 <span class="material-symbols-outlined sync-success-icon" aria-hidden="true">check_circle</span>
                 <h2>Live sync</h2>
                 <p id="live-sync-success-message"></p>
+            </div>
+        </dialog>
+        <dialog id="live-conflict-pending-dialog" class="sync-success-dialog live-conflict-pending-dialog">
+            <div class="sync-success-dialog-content">
+                <button id="close-live-conflict-pending" class="clear-filters icon-action sync-close" type="button" aria-label="Close pending conflict message" title="Close pending conflict message">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+                <span class="material-symbols-outlined sync-success-icon" aria-hidden="true">pending</span>
+                <h2>Conflict resolution pending</h2>
+                <p id="live-conflict-pending-message">The host is reviewing conflicting statuses.</p>
             </div>
         </dialog>
         <dialog id="sync-review-dialog" class="sync-dialog sync-review-dialog">
