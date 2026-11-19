@@ -74,6 +74,14 @@ type LiveAnswerPayload = {
     session: string;
     sdp: RTCSessionDescriptionInit;
 };
+type CompressionStreamConstructor = new (format: "gzip") => {
+    readable: ReadableStream<Uint8Array>;
+    writable: WritableStream<Uint8Array>;
+};
+type DecompressionStreamConstructor = new (format: "gzip") => {
+    readable: ReadableStream<Uint8Array>;
+    writable: WritableStream<Uint8Array>;
+};
 
 let events: EventDefinition[] = [];
 
@@ -322,10 +330,56 @@ async function refreshSyncQr(): Promise<void> {
 const liveSnapshotPrefix = "vex-sync:";
 const liveOfferPrefix = "vex-offer:";
 const liveAnswerPrefix = "vex-answer:";
+const liveOfferCompressedPrefix = "vex-offerc:";
+const liveAnswerCompressedPrefix = "vex-answerc:";
 
 function setLiveSyncStatus(message: string, connected: boolean = false): void {
     liveSyncStatus.textContent = message;
     liveSyncStatus.classList.toggle("connected", connected);
+}
+
+function getCompressionStreamConstructor(): CompressionStreamConstructor | undefined {
+    return (globalThis as unknown as { CompressionStream?: CompressionStreamConstructor }).CompressionStream;
+}
+
+function getDecompressionStreamConstructor(): DecompressionStreamConstructor | undefined {
+    return (globalThis as unknown as { DecompressionStream?: DecompressionStreamConstructor }).DecompressionStream;
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64UrlToBytes(value: string): Uint8Array {
+    const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+    const binary = atob(padded);
+    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function compressLiveQrPayload(payload: LiveOfferPayload | LiveAnswerPayload): Promise<{ prefix: "gzip" | "plain"; value: string }> {
+    const json = JSON.stringify(payload);
+    const bytes = new TextEncoder().encode(json);
+    const CompressionStreamImpl = getCompressionStreamConstructor();
+    if (!CompressionStreamImpl) return { prefix: "plain", value: bytesToBase64Url(bytes) };
+
+    const stream = new Blob([json]).stream().pipeThrough(new CompressionStreamImpl("gzip"));
+    return { prefix: "gzip", value: bytesToBase64Url(new Uint8Array(await new Response(stream).arrayBuffer())) };
+}
+
+async function decompressLiveQrPayload(value: string, compressed: boolean): Promise<LiveOfferPayload | LiveAnswerPayload> {
+    const bytes = base64UrlToBytes(value);
+    const DecompressionStreamImpl = getDecompressionStreamConstructor();
+    if (!compressed || !DecompressionStreamImpl) {
+        return JSON.parse(new TextDecoder().decode(bytes)) as LiveOfferPayload | LiveAnswerPayload;
+    }
+
+    const exactBytes = new Uint8Array(bytes.byteLength);
+    exactBytes.set(bytes);
+    const stream = new Blob([exactBytes]).stream().pipeThrough(new DecompressionStreamImpl("gzip"));
+    const json = await new Response(stream).text();
+    return JSON.parse(json) as LiveOfferPayload | LiveAnswerPayload;
 }
 
 function showLiveSyncSuccess(message: string): void {
@@ -447,7 +501,11 @@ async function createLiveHostOffer(): Promise<void> {
         session,
         sdp: peer.localDescription.toJSON(),
     };
-    await QRCode.toCanvas(liveSyncCanvas, liveOfferPrefix + JSON.stringify(payload), {
+    const compressed = await compressLiveQrPayload(payload);
+    const offerQr = compressed.prefix === "gzip"
+        ? liveOfferCompressedPrefix + compressed.value
+        : liveOfferPrefix + JSON.stringify(payload);
+    await QRCode.toCanvas(liveSyncCanvas, offerQr, {
         errorCorrectionLevel: "L",
         margin: 2,
         width: 420,
@@ -456,8 +514,10 @@ async function createLiveHostOffer(): Promise<void> {
     setLiveSyncStatus("Live host offer ready");
 }
 
-async function joinLiveHostOffer(raw: string): Promise<void> {
-    const payload = JSON.parse(raw) as LiveOfferPayload;
+async function joinLiveHostOffer(raw: string, compressed: boolean = false): Promise<void> {
+    const payload = (compressed
+        ? await decompressLiveQrPayload(raw, true)
+        : JSON.parse(raw)) as LiveOfferPayload;
     if (payload.t !== "webrtc-offer"
         || payload.v !== 1
         || payload.e !== state.eventId
@@ -503,7 +563,11 @@ async function joinLiveHostOffer(raw: string): Promise<void> {
         sdp: clientPeer.localDescription.toJSON(),
     };
     liveSyncCanvas.hidden = false;
-    await QRCode.toCanvas(liveSyncCanvas, liveAnswerPrefix + JSON.stringify(answer), {
+    const compressedAnswer = await compressLiveQrPayload(answer);
+    const answerQr = compressedAnswer.prefix === "gzip"
+        ? liveAnswerCompressedPrefix + compressedAnswer.value
+        : liveAnswerPrefix + JSON.stringify(answer);
+    await QRCode.toCanvas(liveSyncCanvas, answerQr, {
         errorCorrectionLevel: "L",
         margin: 2,
         width: 420,
@@ -512,9 +576,11 @@ async function joinLiveHostOffer(raw: string): Promise<void> {
     showLiveSyncSuccess("Host offer scanned successfully. Show this answer QR to the host.");
 }
 
-async function acceptLiveHostAnswer(raw: string): Promise<void> {
+async function acceptLiveHostAnswer(raw: string, compressed: boolean = false): Promise<void> {
     if (liveRole !== "host") throw new Error("This device is not hosting live sync.");
-    const payload = JSON.parse(raw) as LiveAnswerPayload;
+    const payload = (compressed
+        ? await decompressLiveQrPayload(raw, true)
+        : JSON.parse(raw)) as LiveAnswerPayload;
     if (payload.t !== "webrtc-answer"
         || payload.v !== 1
         || payload.e !== state.eventId
@@ -535,8 +601,16 @@ async function acceptLiveHostAnswer(raw: string): Promise<void> {
 }
 
 async function handleLiveQr(raw: string): Promise<boolean> {
+    if (raw.startsWith(liveOfferCompressedPrefix)) {
+        await joinLiveHostOffer(raw.slice(liveOfferCompressedPrefix.length), true);
+        return true;
+    }
     if (raw.startsWith(liveOfferPrefix)) {
         await joinLiveHostOffer(raw.slice(liveOfferPrefix.length));
+        return true;
+    }
+    if (raw.startsWith(liveAnswerCompressedPrefix)) {
+        await acceptLiveHostAnswer(raw.slice(liveAnswerCompressedPrefix.length), true);
         return true;
     }
     if (raw.startsWith(liveAnswerPrefix)) {
