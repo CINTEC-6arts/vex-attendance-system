@@ -17,6 +17,35 @@ declare global {
     }
 }
 
+type BluetoothCharacteristicLike = {
+    readValue: () => Promise<DataView>;
+    writeValue: (value: BufferSource) => Promise<void>;
+    writeValueWithResponse?: (value: BufferSource) => Promise<void>;
+    startNotifications: () => Promise<void>;
+    addEventListener: (type: "characteristicvaluechanged", listener: (event: Event & { target: { value?: DataView } }) => void) => void;
+};
+type BluetoothServiceLike = {
+    getCharacteristic: (uuid: string) => Promise<BluetoothCharacteristicLike>;
+};
+type BluetoothRemoteGattLike = {
+    connected: boolean;
+    connect: () => Promise<BluetoothRemoteGattLike>;
+    getPrimaryService: (uuid: string) => Promise<BluetoothServiceLike>;
+};
+type BluetoothDeviceLike = {
+    name?: string;
+    gatt?: BluetoothRemoteGattLike;
+    addEventListener: (type: "gattserverdisconnected", listener: () => void) => void;
+};
+type BluetoothNavigator = Navigator & {
+    bluetooth?: {
+        requestDevice: (options: {
+            filters: Array<{ namePrefix: string }>;
+            optionalServices: string[];
+        }) => Promise<BluetoothDeviceLike>;
+    };
+};
+
 enum AttendanceStatus {
     UNPROCESSED = "unprocessed",
     PRESENT = "present",
@@ -107,6 +136,8 @@ const syncMessage = query<HTMLElement>("#sync-message");
 const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
 const cameraSelect = query<HTMLSelectElement>("#camera-select");
 const closeSyncButton = query<HTMLButtonElement>("#close-sync");
+const connectBluetoothButton = query<HTMLButtonElement>("#connect-bluetooth");
+const bluetoothStatus = query<HTMLElement>("#bluetooth-status");
 const syncReviewDialog = query<HTMLDialogElement>("#sync-review-dialog");
 const syncReviewSummary = query<HTMLElement>("#sync-review-summary");
 const syncStatusTally = query<HTMLElement>("#sync-status-tally");
@@ -141,6 +172,14 @@ let scanLoopActive = false;
 let lastScannedPayload = "";
 let lastScannedAt = 0;
 let lockedSyncOrientation: OrientationLockType | null = null;
+const bluetoothServiceUuid = "f3f8b100-5a1f-4c3e-a3b8-2fd1a1b7c001";
+const bluetoothSnapshotUuid = "f3f8b101-5a1f-4c3e-a3b8-2fd1a1b7c001";
+const bluetoothUpdateUuid = "f3f8b102-5a1f-4c3e-a3b8-2fd1a1b7c001";
+const bluetoothQueueKey = "vex-attendance-ble-pending";
+let bluetoothDevice: BluetoothDeviceLike | null = null;
+let bluetoothSnapshotCharacteristic: BluetoothCharacteristicLike | null = null;
+let bluetoothUpdateCharacteristic: BluetoothCharacteristicLike | null = null;
+let bluetoothApplyingSnapshot = false;
 const discrepancies = new Map<string, { name: string; local: AttendanceStatus; incoming: AttendanceStatus }>();
 const pendingSyncChoices = new Map<string, { record: RecordEntry; incoming: AttendanceStatus }>();
 const statusCodes: Record<AttendanceStatus, number> = {
@@ -246,6 +285,96 @@ function decodePackedStatuses(value: string): Array<[number, AttendanceStatus]> 
 async function refreshSyncQr(): Promise<void> {
     const payload = await createSyncPayload();
     await QRCode.toCanvas(syncCanvas, payload, { errorCorrectionLevel: "M", margin: 2, width: 320 });
+}
+
+function encodeBluetoothText(value: string): ArrayBuffer {
+    return new TextEncoder().encode(value).buffer;
+}
+
+function decodeBluetoothText(value: DataView): string {
+    return new TextDecoder().decode(
+        value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength),
+    );
+}
+
+function setBluetoothStatus(message: string, connected: boolean = false): void {
+    bluetoothStatus.textContent = message;
+    bluetoothStatus.classList.toggle("connected", connected);
+}
+
+async function writeBluetoothSnapshot(payload: string): Promise<void> {
+    if (!bluetoothUpdateCharacteristic) throw new Error("Bluetooth update characteristic is unavailable.");
+    const value = encodeBluetoothText(payload);
+    if (bluetoothUpdateCharacteristic.writeValueWithResponse) {
+        await bluetoothUpdateCharacteristic.writeValueWithResponse(value);
+    } else {
+        await bluetoothUpdateCharacteristic.writeValue(value);
+    }
+    localStorage.removeItem(bluetoothQueueKey);
+}
+
+async function sendBluetoothSnapshot(): Promise<void> {
+    if (bluetoothApplyingSnapshot) return;
+    try {
+        const payload = await createSyncPayload();
+        localStorage.setItem(bluetoothQueueKey, payload);
+        if (bluetoothDevice?.gatt?.connected && bluetoothUpdateCharacteristic) {
+            await writeBluetoothSnapshot(payload);
+        }
+    } catch (sendError) {
+        setBluetoothStatus(sendError instanceof Error ? `Bluetooth pending: ${sendError.message}` : "Bluetooth update pending");
+    }
+}
+
+async function receiveBluetoothSnapshot(raw: string): Promise<void> {
+    bluetoothApplyingSnapshot = true;
+    try {
+        await applySyncPayload(raw);
+        setBluetoothStatus("Connected and synchronized", true);
+    } finally {
+        bluetoothApplyingSnapshot = false;
+    }
+}
+
+async function connectBluetoothHub(): Promise<void> {
+    if (!state.eventId || !state.records.length) {
+        throw new Error("Select an event before connecting to Bluetooth.");
+    }
+    const bluetooth = (navigator as BluetoothNavigator).bluetooth;
+    if (!bluetooth) {
+        throw new Error("This browser does not support Web Bluetooth. Use Chrome or Edge.");
+    }
+    setBluetoothStatus("Choose the VEX Attendance Bluetooth hub...");
+    bluetoothDevice = await bluetooth.requestDevice({
+        filters: [{ namePrefix: "VEX Attendance" }],
+        optionalServices: [bluetoothServiceUuid],
+    });
+    bluetoothDevice.addEventListener("gattserverdisconnected", () => {
+        bluetoothSnapshotCharacteristic = null;
+        bluetoothUpdateCharacteristic = null;
+        setBluetoothStatus("Bluetooth disconnected. Changes are queued locally.");
+    });
+    if (!bluetoothDevice.gatt) throw new Error("The Bluetooth hub has no GATT server.");
+    const server = await bluetoothDevice.gatt.connect();
+    const service = await server.getPrimaryService(bluetoothServiceUuid);
+    bluetoothSnapshotCharacteristic = await service.getCharacteristic(bluetoothSnapshotUuid);
+    bluetoothUpdateCharacteristic = await service.getCharacteristic(bluetoothUpdateUuid);
+    const notifications = await service.getCharacteristic(bluetoothUpdateUuid);
+    await notifications.startNotifications();
+    notifications.addEventListener("characteristicvaluechanged", (event) => {
+        const value = event.target.value;
+        if (!value) return;
+        void receiveBluetoothSnapshot(decodeBluetoothText(value)).catch((syncError) => {
+            showErrorPopup(syncError instanceof Error ? syncError.message : String(syncError));
+        });
+    });
+
+    const snapshot = await bluetoothSnapshotCharacteristic.readValue();
+    await receiveBluetoothSnapshot(decodeBluetoothText(snapshot));
+
+    const pending = localStorage.getItem(bluetoothQueueKey);
+    await writeBluetoothSnapshot(pending || await createSyncPayload());
+    setBluetoothStatus(`Connected to ${bluetoothDevice.name || "Bluetooth hub"}`, true);
 }
 
 async function applySyncPayload(raw: string): Promise<void> {
@@ -439,6 +568,7 @@ function getAttendanceStatus(record) {
 
 function saveAttendance() {
     localStorage.setItem("attendance-status", JSON.stringify(state.attendance));
+    void sendBluetoothSnapshot();
 }
 
 function display(value) {
@@ -1105,6 +1235,12 @@ syncAttendanceButton.addEventListener("click", async () => {
     } catch (scanError) {
         showErrorPopup(scanError instanceof Error ? scanError.message : String(scanError));
     }
+});
+connectBluetoothButton.addEventListener("click", () => {
+    void connectBluetoothHub().catch((bluetoothError) => {
+        setBluetoothStatus("Bluetooth connection unavailable");
+        showErrorPopup(bluetoothError instanceof Error ? bluetoothError.message : String(bluetoothError));
+    });
 });
 cameraSelect.addEventListener("change", () => {
     void startSyncCamera(cameraSelect.value).catch((scanError) => {

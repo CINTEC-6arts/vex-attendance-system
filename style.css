@@ -458,6 +458,28 @@ select:focus {
     margin: 3px 0 18px;
 }
 
+.ble-sync {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 16px;
+}
+
+.ble-sync .action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.ble-sync .status {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.ble-sync .status.connected {
+    color: #79d8a0;
+}
+
 .sync-panels {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
