@@ -45,6 +45,7 @@ type SyncPayload = {
     e: string;
     h: string;
     s: string;
+    c?: string[];
 };
 type LegacySyncPayload = {
     v: 1;
@@ -309,7 +310,13 @@ async function createSyncPayload(): Promise<string> {
     let binary = "";
     bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
     const packedStatuses = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    const payload: SyncPayload = { v: 2, e: state.eventId, h: await getDatasetHash(), s: packedStatuses };
+    const payload: SyncPayload = {
+        v: 2,
+        e: state.eventId,
+        h: await getDatasetHash(),
+        s: packedStatuses,
+        ...(liveRole === "host" && pendingSyncChoices.size ? { c: [...pendingSyncChoices.keys()] } : {}),
+    };
     return JSON.stringify(payload);
 }
 
@@ -464,7 +471,11 @@ async function broadcastLiveSnapshot(): Promise<void> {
 async function receiveLiveSnapshot(raw: string): Promise<void> {
     liveApplyingSnapshot = true;
     try {
-        await applyLiveSnapshot(raw, !liveInitialSnapshotPending);
+        if (liveRole === "host") {
+            await applySyncPayload(raw);
+        } else {
+            await applyLiveSnapshot(raw, !liveInitialSnapshotPending);
+        }
     } finally {
         liveApplyingSnapshot = false;
         liveInitialSnapshotPending = false;
@@ -667,6 +678,9 @@ async function applyLiveSnapshot(raw: string, showChanges: boolean = true): Prom
     state.records.forEach((record, index) => {
         const incoming = incomingStatuses.get(index) || AttendanceStatus.UNPROCESSED;
         const local = getAttendanceStatus(record);
+        if (payload.c?.includes(attendanceKey(record))) {
+            return;
+        }
         if (local !== incoming) {
             overridden.push(`${record.name}: ${local} -> ${incoming}`);
             changedCount += 1;
@@ -679,6 +693,13 @@ async function applyLiveSnapshot(raw: string, showChanges: boolean = true): Prom
     await refreshSyncQr();
 
     if (!showChanges) return;
+
+    if (payload.c?.length) {
+        liveConflictPendingMessage.textContent =
+            `${payload.c.length} conflicting status${payload.c.length === 1 ? "" : "es"} are waiting for the host to resolve.`;
+        if (!liveConflictPendingDialog.open) liveConflictPendingDialog.showModal();
+        return;
+    }
 
     if (overridden.length > 0) {
         const preview = overridden.slice(0, 3).join("; ");
@@ -1639,6 +1660,8 @@ liveSyncDialog.addEventListener("cancel", closeLiveSyncDialog);
 backLiveSyncButton.addEventListener("click", () => backToSyncMethods(false));
 closeLiveSyncSuccessButton.addEventListener("click", () => liveSyncSuccessDialog.close());
 liveSyncSuccessDialog.addEventListener("cancel", () => liveSyncSuccessDialog.close());
+closeLiveConflictPendingButton.addEventListener("click", () => liveConflictPendingDialog.close());
+liveConflictPendingDialog.addEventListener("cancel", () => liveConflictPendingDialog.close());
 closeSyncReviewButton.addEventListener("click", () => syncReviewDialog.close());
 closeErrorButton.addEventListener("click", () => errorDialog.close());
 errorDialog.addEventListener("cancel", () => errorDialog.close());
@@ -1658,6 +1681,7 @@ applySyncReviewButton.addEventListener("click", async () => {
     syncReviewDialog.close();
     syncMessage.textContent = `Applied ${appliedCount} reviewed status${appliedCount === 1 ? "" : "es"}.`;
     await refreshSyncQr();
+    if (liveRole === "host") await broadcastLiveSnapshot();
 });
 const chooseAllSyncSource = (source: "local" | "incoming"): void => {
     syncReviewList.querySelectorAll<HTMLButtonElement>(".sync-choice-button").forEach((button) => {
