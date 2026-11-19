@@ -139,6 +139,8 @@ const liveSyncStatus = query<HTMLElement>("#live-sync-status");
 const liveSyncSuccessDialog = query<HTMLDialogElement>("#live-sync-success-dialog");
 const liveSyncSuccessMessage = query<HTMLElement>("#live-sync-success-message");
 const closeLiveSyncSuccessButton = query<HTMLButtonElement>("#close-live-sync-success");
+const syncToast = query<HTMLElement>("#sync-toast");
+const syncToastMessage = query<HTMLElement>("#sync-toast-message");
 const cameraSelectWrap = query<HTMLElement>("#camera-select-wrap");
 const cameraSelect = query<HTMLSelectElement>("#camera-select");
 const liveCameraSelectWrap = query<HTMLElement>("#live-camera-select-wrap");
@@ -181,6 +183,7 @@ let lastScannedAt = 0;
 let lockedSyncOrientation: OrientationLockType | null = null;
 let liveRole: "host" | "client" | null = null;
 let liveApplyingSnapshot = false;
+let liveInitialSnapshotPending = false;
 let clientPeer: RTCPeerConnection | null = null;
 let clientChannel: RTCDataChannel | null = null;
 const hostPeers = new Map<string, RTCPeerConnection>();
@@ -330,6 +333,19 @@ function showLiveSyncSuccess(message: string): void {
     if (!liveSyncSuccessDialog.open) liveSyncSuccessDialog.showModal();
 }
 
+let syncToastTimer: number | null = null;
+
+function showSyncToast(message: string, hasOverrides: boolean = false): void {
+    syncToastMessage.textContent = message;
+    syncToast.classList.toggle("has-overrides", hasOverrides);
+    syncToast.hidden = false;
+    if (syncToastTimer !== null) window.clearTimeout(syncToastTimer);
+    syncToastTimer = window.setTimeout(() => {
+        syncToast.hidden = true;
+        syncToastTimer = null;
+    }, 7000);
+}
+
 async function waitForIceGathering(peer: RTCPeerConnection): Promise<void> {
     if (peer.iceGatheringState === "complete") return;
     await new Promise<void>((resolve) => {
@@ -372,9 +388,10 @@ async function broadcastLiveSnapshot(): Promise<void> {
 async function receiveLiveSnapshot(raw: string): Promise<void> {
     liveApplyingSnapshot = true;
     try {
-        await applySyncPayload(raw);
+        await applyLiveSnapshot(raw, !liveInitialSnapshotPending);
     } finally {
         liveApplyingSnapshot = false;
+        liveInitialSnapshotPending = false;
     }
     if (liveRole === "host") await broadcastLiveSnapshot();
 }
@@ -385,6 +402,7 @@ function configureHostChannel(session: string, channel: RTCDataChannel): void {
         const message = `Live host: ${hostChannels.size} device${hostChannels.size === 1 ? "" : "s"} connected`;
         setLiveSyncStatus(message, true);
         showLiveSyncSuccess(message);
+        liveInitialSnapshotPending = true;
         void broadcastLiveSnapshot();
     });
     channel.addEventListener("close", () => {
@@ -458,6 +476,7 @@ async function joinLiveHostOffer(raw: string): Promise<void> {
         clientChannel = event.channel;
         clientChannel.addEventListener("open", () => {
             setLiveSyncStatus("Connected to live host", true);
+            liveInitialSnapshotPending = true;
             void broadcastLiveSnapshot();
         });
         clientChannel.addEventListener("close", () => {
@@ -525,6 +544,57 @@ async function handleLiveQr(raw: string): Promise<boolean> {
         return true;
     }
     return false;
+}
+
+async function applyLiveSnapshot(raw: string, showChanges: boolean = true): Promise<void> {
+    const payload = JSON.parse(raw) as ParsedSyncPayload;
+    const validPayload = payload.e === state.eventId
+        && typeof payload.h === "string"
+        && ((payload.v === 2 && typeof payload.s === "string")
+            || (payload.v === 1 && Array.isArray(payload.s)));
+    if (!validPayload) throw new Error("This live sync snapshot is not valid for the selected event.");
+    if (payload.h !== await getDatasetHash()) {
+        throw new Error("The live sync data.csv fingerprint does not match this device.");
+    }
+
+    const statuses = payload.v === 2
+        ? decodePackedStatuses(payload.s as string)
+        : payload.s as Array<[number, AttendanceStatus]>;
+    const overridden: string[] = [];
+    let changedCount = 0;
+    const incomingStatuses = new Map<number, AttendanceStatus>();
+    state.records.forEach((_, index) => incomingStatuses.set(index, AttendanceStatus.UNPROCESSED));
+    statuses.forEach((entry) => {
+        if (Array.isArray(entry) && typeof entry[0] === "number" && isAttendanceStatus(entry[1])) {
+            incomingStatuses.set(entry[0], entry[1]);
+        }
+    });
+
+    state.records.forEach((record, index) => {
+        const incoming = incomingStatuses.get(index) || AttendanceStatus.UNPROCESSED;
+        const local = getAttendanceStatus(record);
+        if (local !== incoming) {
+            overridden.push(`${record.name}: ${local} -> ${incoming}`);
+            changedCount += 1;
+        }
+        state.attendance[attendanceKey(record)] = incoming;
+    });
+
+    saveAttendance();
+    renderPreservingScroll();
+    await refreshSyncQr();
+
+    if (!showChanges) return;
+
+    if (overridden.length > 0) {
+        const preview = overridden.slice(0, 3).join("; ");
+        const remainder = overridden.length > 3 ? `; +${overridden.length - 3} more` : "";
+        showSyncToast(`${overridden.length} status${overridden.length === 1 ? "" : "es"} overridden: ${preview}${remainder}`, true);
+    } else if (changedCount === 0) {
+        showSyncToast("Attendance is already up to date");
+    } else {
+        showSyncToast(`${changedCount} attendance status${changedCount === 1 ? "" : "es"} updated`);
+    }
 }
 
 async function applySyncPayload(raw: string): Promise<void> {
