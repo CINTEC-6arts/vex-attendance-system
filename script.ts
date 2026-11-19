@@ -466,7 +466,7 @@ async function receiveLiveSnapshot(raw: string): Promise<void> {
     liveApplyingSnapshot = true;
     try {
         if (liveInitialSnapshotPending) {
-            await applySyncPayload(raw);
+            await applySyncPayload(raw, true);
         } else {
             await applyLiveSnapshot(raw, true);
         }
@@ -696,7 +696,7 @@ async function applyLiveSnapshot(raw: string, showChanges: boolean = true): Prom
     }
 }
 
-async function applySyncPayload(raw: string): Promise<void> {
+async function applySyncPayload(raw: string, liveInitial: boolean = false): Promise<void> {
     if (await handleLiveQr(raw)) return;
     if (raw.startsWith(liveSnapshotPrefix)) {
         await receiveLiveSnapshot(raw.slice(liveSnapshotPrefix.length));
@@ -797,9 +797,11 @@ async function applySyncPayload(raw: string): Promise<void> {
     syncReviewSummary.textContent = pendingSyncChoices.size
         ? `${importedCount} imported successfully. ${pendingSyncChoices.size} conflicting status${pendingSyncChoices.size === 1 ? "" : "es"} need review.`
         : `${importedCount} status${importedCount === 1 ? "" : "es"} imported successfully.`;
-    // The scanner dialog is modal, so this summary must also enter the top
-    // layer; a non-modal dialog cannot be shown while another modal is open.
-    if (!syncReviewDialog.open) syncReviewDialog.showModal();
+    // The first live pairing snapshot may contain conflicts. Regular QR scans
+    // keep the existing summary behavior, while later live snapshots auto-merge.
+    if (!liveInitial || pendingSyncChoices.size > 0) {
+        if (!syncReviewDialog.open) syncReviewDialog.showModal();
+    }
 }
 
 async function fetchWithRetry(url: string): Promise<Response> {
