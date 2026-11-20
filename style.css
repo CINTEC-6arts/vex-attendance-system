@@ -1748,7 +1748,7 @@ mark {
         margin-top: 0;
     }
 
-    .mobile-event-row>#toggle-teams {
+    .mobile-event-row > #toggle-teams {
         margin: 0;
         order: 2;
     }
@@ -1762,16 +1762,16 @@ mark {
         width: 100%;
     }
 
-    .mobile-search-row>.search-wrap {
+    .mobile-search-row > .search-wrap {
         flex: 1 1 auto;
         min-width: 0;
     }
 
-    .mobile-search-row>* {
+    .mobile-search-row > * {
         order: initial;
     }
 
-    .mobile-search-row>.divider {
+    .mobile-search-row > .divider {
         display: none;
         align-self: center;
         justify-self: center;
@@ -1867,12 +1867,12 @@ mark {
     }
 }
 
-@media (max-width: 1229px) {
+@media (max-width: 1174px) {
     .control-toolbar {
         align-items: stretch;
     }
 
-    .control-toolbar>.divider {
+    .control-toolbar > .divider {
         display: none;
     }
 
@@ -1904,7 +1904,7 @@ mark {
     }
 }
 
-@media (min-width: 1230px) {
+@media (min-width: 1175px) {
     .filter-controls>* {
         order: 2;
     }
@@ -1928,9 +1928,8 @@ mark {
 }
 
 @media (max-width: 650px) {
-
-    .mobile-search-row>.search-wrap,
-    .mobile-search-row>.search-wrap~.clear-filters {
+    .mobile-search-row > .search-wrap,
+    .mobile-search-row > .search-wrap ~ .clear-filters {
         order: 0;
     }
 }
@@ -1964,12 +1963,12 @@ mark {
     }
 
     .mobile-event-row .action-button,
-    .mobile-event-row>#toggle-teams {
+    .mobile-event-row > #toggle-teams {
         flex: 0 0 44px;
         margin-top: 0;
     }
 
-    .mobile-event-row>#toggle-teams {
+    .mobile-event-row > #toggle-teams {
         order: 2;
     }
 
@@ -1982,18 +1981,18 @@ mark {
         margin-top: 12px;
     }
 
-    .mobile-search-row>.search-wrap {
+    .mobile-search-row > .search-wrap {
         flex: 1 1 auto;
         min-width: 0;
         order: 0;
     }
 
-    .mobile-search-row>.clear-filters {
+    .mobile-search-row > .clear-filters {
         order: 0;
     }
 
-    .mobile-search-row>.divider,
-    .control-toolbar>.divider {
+    .mobile-search-row > .divider,
+    .control-toolbar > .divider {
         display: none;
     }
 
@@ -2038,30 +2037,30 @@ mark {
         display: contents;
     }
 
-    .mobile-search-row>.search-wrap {
+    .mobile-search-row > .search-wrap {
         grid-column: 1;
         grid-row: 2;
         min-width: 0;
     }
 
-    .mobile-search-row>.clear-filters {
+    .mobile-search-row > .clear-filters {
         grid-column: 5;
         grid-row: 2;
     }
 
-    .filter-controls>.select-wrap {
+    .filter-controls > .select-wrap {
         grid-row: 2;
     }
 
-    .filter-controls>.select-wrap:nth-child(1) {
+    .filter-controls > .select-wrap:nth-child(1) {
         grid-column: 2;
     }
 
-    .filter-controls>.select-wrap:nth-child(2) {
+    .filter-controls > .select-wrap:nth-child(2) {
         grid-column: 3;
     }
 
-    .filter-controls>.select-wrap:nth-child(3) {
+    .filter-controls > .select-wrap:nth-child(3) {
         grid-column: 4;
     }
 
@@ -2074,7 +2073,7 @@ mark {
         display: none;
     }
 
-    .filter-controls>.select-wrap {
+    .filter-controls > .select-wrap {
         flex: 1 1 0;
         min-width: 0;
     }
