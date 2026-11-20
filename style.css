@@ -233,11 +233,6 @@ select {
     background: #1b2944;
 }
 
-.checkbox-filter label:has(input:checked) {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-}
-
 .status-filter-option .material-symbols-outlined {
     font-size: 17px;
 }
