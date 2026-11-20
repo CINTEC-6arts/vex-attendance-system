@@ -418,12 +418,14 @@ export function render(): void {
     core.resultCount.append(inspectionTally);
     core.clearButton.classList.toggle("visible", Boolean(core.state.query));
     updateClearFiltersButton();
-    const filterSummary = [
-        selectedDivisions.length ? `divisions: ${selectedDivisions.join(", ")}` : "",
-        selectedStatuses.length ? `statuses: ${selectedStatuses.join(", ")}` : "",
-        selectedInspectionFilters.length ? `inspection: ${selectedInspectionFilters.join(", ")}` : "",
-    ].filter(Boolean).join(" · ");
-    core.statusElement.textContent = `${filteredTeams.size} shown${filterSummary ? ` · ${filterSummary}` : ""}`;
+    const matchesSelection = (selected: string[], defaults: string[]): boolean =>
+        selected.length === defaults.length && defaults.every((value) => selected.includes(value));
+    const isFiltered = Boolean(query)
+        || Boolean(core.state.teamCode)
+        || !matchesSelection(selectedDivisions, ["ES", "MS"])
+        || !matchesSelection(selectedStatuses, ["unprocessed", "present", "absent", "flagged"])
+        || !matchesSelection(selectedInspectionFilters, ["inspected", "not-inspected"]);
+    core.statusElement.textContent = `${filteredTeams.size} shown${isFiltered ? " · filtered" : ""}`;
     core.results.replaceChildren();
 
     if (!filteredTeams.size) {
