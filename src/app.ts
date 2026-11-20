@@ -606,6 +606,7 @@ function populateDivisions() {
         const input = document.createElement("input");
         input.type = "checkbox";
         input.value = division;
+        input.checked = true;
         label.append(input, division);
         core.divisionFilter.append(label);
     });
@@ -614,13 +615,13 @@ function populateDivisions() {
 function clearEventFilters() {
     core.searchInput.value = "";
     core.teamFilter.value = "";
-    core.divisionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
-    core.statusFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
-    core.inspectionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
+    core.divisionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = true; });
+    core.statusFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = true; });
+    core.inspectionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = true; });
     core.state.query = "";
     core.state.teamCode = "";
-    core.state.statusFilters = [];
-    core.state.inspectionFilters = [];
+    core.state.statusFilters = ["unprocessed", "present", "absent", "flagged"] as core.AttendanceStatus[];
+    core.state.inspectionFilters = ["inspected", "not-inspected"];
     core.expandedTeams.clear();
 }
 

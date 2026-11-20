@@ -93,8 +93,8 @@ export const state = {
     eventId: "",
     query: "",
     teamCode: "",
-    statusFilters: [] as AttendanceStatus[],
-    inspectionFilters: [] as ("inspected" | "not-inspected")[],
+    statusFilters: ["unprocessed", "present", "absent", "flagged"] as AttendanceStatus[],
+    inspectionFilters: ["inspected", "not-inspected"] as ("inspected" | "not-inspected")[],
     attendance: JSON.parse(localStorage.getItem("attendance-status") || "{}") as Record<string, AttendanceStatus>,
     inspection: JSON.parse(localStorage.getItem("inspection-status") || "{}") as Record<string, boolean>,
 };
