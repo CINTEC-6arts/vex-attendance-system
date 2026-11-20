@@ -97,7 +97,7 @@ h1 {
         background: var(--background);
         border-radius: inherit;
         width: calc(100%);
-        height: 30px;
+        height: 50px;
         left: 0;
         top: -20px;
     }
@@ -1339,6 +1339,7 @@ mark {
     border-radius: 18px;
     padding-bottom: 14px;
     background: var(--surface);
+    overflow: clip;
 }
 
 .organisation-heading {
@@ -1348,7 +1349,7 @@ mark {
     position: sticky;
     top: var(--sticky-toolbar-height, 0px);
     z-index: 4;
-    border-radius: 18px;
+    /* border-radius: 18px; */
     min-height: 42px;
     padding: 10px 24px 0 24px;
     color: var(--accent);
@@ -1389,13 +1390,21 @@ mark {
     background-position: left top;
 }
 
-.team-group.inspected {
-    outline-color: #c19aff;
+.team-group.inspected::after {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 9;
+    content: "";
+    pointer-events: none;
+    outline: 2px solid #b084ff;
+    border-radius: inherit;
+    outline-offset: -2px;
     box-shadow:
-        0 0 0 2px rgba(193, 154, 255, .95),
-        0 0 28px rgba(146, 86, 255, .72),
-        0 0 52px rgba(112, 52, 220, .42),
-        0 8px 24px rgba(0, 0, 0, 0.16);
+        0 0 0 2px inset rgba(193, 154, 255, .95),
+        0 0 28px inset rgba(146, 86, 255, .72);
 }
 
 .team-group::before {
@@ -1571,7 +1580,7 @@ mark {
 }
 
 .team-action.inspection {
-    color: #b084ff;
+    color: var(--muted);
 }
 
 .team-action.inspection:hover,
