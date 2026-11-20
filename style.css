@@ -260,11 +260,33 @@ select {
 
 .checkbox-filter input {
     display: block;
+    flex: 0 0 16px;
     width: 16px;
+    max-width: 16px;
     min-height: 16px;
     height: 16px;
     margin: 0;
-    accent-color: var(--accent);
+    padding: 0;
+}
+
+.status-filter-option.unprocessed input {
+    --status-checkbox-colour: var(--accent);
+}
+
+.status-filter-option.present input {
+    --status-checkbox-colour: #5ee6a5;
+}
+
+.status-filter-option.absent input {
+    --status-checkbox-colour: #ff858d;
+}
+
+.status-filter-option.flagged input {
+    --status-checkbox-colour: #f3c768;
+}
+
+.status-filter-option input {
+    accent-color: var(--status-checkbox-colour);
 }
 
 .checkbox-filter .material-symbols-outlined {
