@@ -242,6 +242,10 @@ select {
     font-size: 17px;
 }
 
+.status-filter-option.unprocessed .material-symbols-outlined {
+    color: var(--accent);
+}
+
 .status-filter-option.present .material-symbols-outlined {
     color: #5ee6a5;
 }
@@ -1408,6 +1412,10 @@ mark {
 
 .heading-tally .material-symbols-outlined {
     font-size: 17px;
+}
+
+.heading-tally.unprocessed .material-symbols-outlined {
+    color: var(--accent);
 }
 
 .heading-tally.present .material-symbols-outlined {
