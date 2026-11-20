@@ -475,11 +475,6 @@ export function render(): void {
                 group.style.setProperty("--team-gradient", getTeamGradient(teamRecords));
                 highlightText(core.child<HTMLElement>(group, ".team-code"), `${team} · ${division}`, query);
                 core.child<HTMLElement>(group, ".team-total").textContent = `${records.length} ${records.length === 1 ? "person" : "people"}`;
-                const teamTallies = core.child<HTMLElement>(group, ".team-status-tallies");
-                appendHeadingTally(teamTallies, "unprocessed", teamRecords.filter((record) => core.getAttendanceStatus(record) === core.AttendanceStatus.UNPROCESSED).length, "unprocessed students", "question_mark");
-                appendHeadingTally(teamTallies, "present", teamRecords.filter((record) => core.getAttendanceStatus(record) === core.AttendanceStatus.PRESENT).length, "present students", "check");
-                appendHeadingTally(teamTallies, "absent", teamRecords.filter((record) => core.getAttendanceStatus(record) === core.AttendanceStatus.ABSENT).length, "absent students", "close");
-                appendHeadingTally(teamTallies, "flagged", teamRecords.filter((record) => core.getAttendanceStatus(record) === core.AttendanceStatus.FLAGGED).length, "flagged students", "flag");
                 const inspected = core.isTeamInspected(team, division as core.Division);
                 group.classList.toggle("inspected", inspected);
                 const inspectionButton = core.child<HTMLButtonElement>(group, "[data-team-inspection]");
@@ -491,6 +486,11 @@ export function render(): void {
                 group.querySelectorAll<HTMLButtonElement>("[data-team-status]").forEach((button) => {
                     button.dataset.team = team;
                     button.dataset.division = division;
+                    const status = button.dataset.teamStatus as core.AttendanceStatus;
+                    const badge = core.child<HTMLElement>(button, ".team-tally-badge");
+                    badge.textContent = String(teamRecords.filter((record) =>
+                        core.getAttendanceStatus(record) === status
+                    ).length);
                 });
                 const teamHeading = core.child<HTMLElement>(group, ".team-heading");
                 const members = core.child<HTMLElement>(group, ".team-members");

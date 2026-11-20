@@ -1402,6 +1402,10 @@ mark {
     color: var(--ink);
 }
 
+.organisation-tallies .heading-tally strong {
+    color: var(--muted);
+}
+
 .heading-tally .material-symbols-outlined {
     font-size: 17px;
 }
@@ -1599,6 +1603,7 @@ mark {
 }
 
 .team-action {
+    position: relative;
     display: inline-grid;
     place-items: center;
     width: 40px;
@@ -1656,6 +1661,39 @@ mark {
 
 .team-action .material-symbols-outlined {
     font-size: 18px;
+}
+
+.team-tally-badge {
+    position: absolute;
+    top: -5px;
+    right: -3px;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    text-shadow: none;
+    pointer-events: none;
+}
+
+.team-action.present .team-tally-badge {
+    color: var(--muted);
+    text-shadow: none;
+}
+
+.team-action.absent .team-tally-badge {
+    color: var(--muted);
+    text-shadow: none;
+}
+
+.team-action.flagged .team-tally-badge {
+    color: var(--muted);
+    text-shadow: none;
 }
 
 .team-total {
