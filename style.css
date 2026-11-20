@@ -258,6 +258,18 @@ select {
     color: #f3c768;
 }
 
+.inspection-filter-option .material-symbols-outlined {
+    font-size: 17px;
+}
+
+.inspection-filter-option.inspected .material-symbols-outlined {
+    color: #b084ff;
+}
+
+.inspection-filter-option.not-inspected .material-symbols-outlined {
+    color: var(--muted);
+}
+
 .checkbox-filter input {
     display: block;
     flex: 0 0 16px;

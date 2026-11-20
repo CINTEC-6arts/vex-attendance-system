@@ -293,7 +293,8 @@ export function updateToggleTeamsButton(): void {
 function updateClearFiltersButton(): void {
     core.clearFiltersButton.disabled = !core.teamFilter.value
         && !core.divisionFilter.querySelector("input:checked")
-        && !core.statusFilter.querySelector("input:checked");
+        && !core.statusFilter.querySelector("input:checked")
+        && !core.inspectionFilter.querySelector("input:checked");
 }
 
 function getTeamStatusFlags(teamRecords: core.RecordEntry[]): Set<core.AttendanceStatus> {
@@ -340,12 +341,16 @@ export function render(): void {
     const selectedDivisions = [...core.divisionFilter.querySelectorAll<HTMLInputElement>("input:checked")]
         .map((input) => input.value);
     const selectedStatuses = core.state.statusFilters;
+    const selectedInspectionFilters = core.state.inspectionFilters;
     const searchFiltered = core.state.records.filter((record) => {
         const matchesQuery = !query || [record.teamCode, record.division, record.organisation, record.name]
             .some((value) => value.toLowerCase().includes(query));
+        const matchesInspection = !selectedInspectionFilters.length
+            || selectedInspectionFilters.includes(core.isTeamInspected(record.teamCode, record.division) ? "inspected" : "not-inspected");
         return matchesQuery
             && (!core.state.teamCode || record.teamCode === core.state.teamCode)
-            && (!selectedDivisions.length || selectedDivisions.includes(record.division));
+            && (!selectedDivisions.length || selectedDivisions.includes(record.division))
+            && matchesInspection;
     });
     const matchingTeams = new Set(searchFiltered
         .filter((record) => !selectedStatuses.length || selectedStatuses.includes(core.getAttendanceStatus(record)))
@@ -416,6 +421,7 @@ export function render(): void {
     const filterSummary = [
         selectedDivisions.length ? `divisions: ${selectedDivisions.join(", ")}` : "",
         selectedStatuses.length ? `statuses: ${selectedStatuses.join(", ")}` : "",
+        selectedInspectionFilters.length ? `inspection: ${selectedInspectionFilters.join(", ")}` : "",
     ].filter(Boolean).join(" · ");
     core.statusElement.textContent = `${filteredTeams.size} shown${filterSummary ? ` · ${filterSummary}` : ""}`;
     core.results.replaceChildren();
@@ -610,9 +616,11 @@ function clearEventFilters() {
     core.teamFilter.value = "";
     core.divisionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
     core.statusFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
+    core.inspectionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
     core.state.query = "";
     core.state.teamCode = "";
     core.state.statusFilters = [];
+    core.state.inspectionFilters = [];
     core.expandedTeams.clear();
 }
 

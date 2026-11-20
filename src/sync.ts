@@ -757,6 +757,11 @@ core.statusFilter.addEventListener("change", () => {
         .map((input) => input.value as core.AttendanceStatus);
     core.renderPreservingScrollCallback();
 });
+core.inspectionFilter.addEventListener("change", () => {
+    core.state.inspectionFilters = [...core.inspectionFilter.querySelectorAll<HTMLInputElement>("input:checked")]
+        .map((input) => input.value as "inspected" | "not-inspected");
+    core.renderPreservingScrollCallback();
+});
 core.divisionFilter.addEventListener("change", () => {
     core.renderPreservingScrollCallback();
 });
@@ -765,9 +770,11 @@ core.clearFiltersButton.addEventListener("click", () => {
     core.teamFilter.value = "";
     core.divisionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
     core.statusFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
+    core.inspectionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
     core.state.query = "";
     core.state.teamCode = "";
     core.state.statusFilters = [];
+    core.state.inspectionFilters = [];
     core.renderPreservingScrollCallback();
 });
 core.toggleFiltersButton.addEventListener("click", () => {
