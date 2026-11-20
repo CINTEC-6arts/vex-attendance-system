@@ -1313,6 +1313,11 @@ select:focus {
     color: #ffbd5c;
 }
 
+.attendance-tally.inspected .tally-icon {
+    color: #b084ff;
+    font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+
 mark {
     padding: 0 2px;
     border-radius: 3px;

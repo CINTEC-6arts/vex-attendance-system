@@ -338,6 +338,13 @@ export function render(): void {
     // A team with at least one flagged member is counted as flagged.
     const flaggedTeamCount = document.createElement("strong");
     flaggedTeamCount.textContent = String([...teamStatuses.values()].filter((statuses) => statuses.has("flagged")).length);
+    const inspectedTeamCount = document.createElement("strong");
+    const inspectedTeamKeys = [...new Set(core.state.records.map((record) => `${record.teamCode}|${record.division}`))]
+        .filter((teamKey) => {
+            const [team, division] = teamKey.split("|");
+            return core.isTeamInspected(team, division as core.Division);
+        });
+    inspectedTeamCount.textContent = String(inspectedTeamKeys.length);
     const appendStatusTally = (count: HTMLElement, status: core.AttendanceStatus, label: string, icon: string): void => {
         const tally = document.createElement("span");
         tally.className = `attendance-tally ${status}`;
@@ -355,6 +362,16 @@ export function render(): void {
     appendStatusTally(absentTeamCount, core.AttendanceStatus.ABSENT, "absent", "close");
     core.resultCount.append(" · ");
     appendStatusTally(flaggedTeamCount, core.AttendanceStatus.FLAGGED, "flagged", "flag");
+    core.resultCount.append(" · ");
+    const inspectionTally = document.createElement("span");
+    inspectionTally.className = "attendance-tally inspected";
+    inspectionTally.setAttribute("aria-label", `${inspectedTeamCount.textContent} teams inspected`);
+    const inspectionIcon = document.createElement("span");
+    inspectionIcon.className = "material-symbols-outlined tally-icon";
+    inspectionIcon.setAttribute("aria-hidden", "true");
+    inspectionIcon.textContent = "fact_check";
+    inspectionTally.append(inspectedTeamCount, inspectionIcon);
+    core.resultCount.append(inspectionTally);
     core.clearButton.classList.toggle("visible", Boolean(core.state.query));
     updateClearFiltersButton();
     const filterSummary = [
