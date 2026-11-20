@@ -25,7 +25,7 @@ local network or hotspot.
 The host can generate a new pairing QR without disconnecting existing guests.
 Use **Disconnect** to close all live connections from the current device.
 
-## Signaling payloads
+## Signalling payloads
 
 Offer:
 
@@ -77,7 +77,7 @@ snapshots pass through the existing conflict-review flow.
 The host currently receives client snapshots and broadcasts its local snapshot
 to open peer channels. A client does not directly broadcast to other clients.
 
-## Offline behavior
+## Offline behaviour
 
 An active hotspot or LAN route is still required for WebRTC traffic. If the
 network disappears:
