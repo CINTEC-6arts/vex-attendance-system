@@ -185,6 +185,89 @@ select {
     display: block;
 }
 
+.checkbox-filter {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 5px 8px;
+    min-width: 0;
+    height: 44px;
+    margin: 0;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: #101a2d;
+}
+
+.checkbox-filter legend {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0 2px 0 0;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.checkbox-filter label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    height: 30px;
+    min-height: 30px;
+    padding: 0 4px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.checkbox-filter label:hover,
+.checkbox-filter label:has(input:focus-visible) {
+    border-color: var(--line);
+    background: #1b2944;
+}
+
+.checkbox-filter label:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.status-filter-option .material-symbols-outlined {
+    font-size: 17px;
+}
+
+.status-filter-option.present .material-symbols-outlined {
+    color: #5ee6a5;
+}
+
+.status-filter-option.absent .material-symbols-outlined {
+    color: #ff858d;
+}
+
+.status-filter-option.flagged .material-symbols-outlined {
+    color: #f3c768;
+}
+
+.checkbox-filter input {
+    display: block;
+    width: 16px;
+    min-height: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.checkbox-filter .material-symbols-outlined {
+    display: block;
+    line-height: 1;
+}
+
 .event-select-wrap select {
     border-color: #8f2935;
     background: #8f2935;
@@ -1797,6 +1880,12 @@ mark {
         display: grid;
     }
 
+    .checkbox-filter {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 44px;
+    }
+
     select {
         width: 100%;
         margin-top: 10px;
@@ -1881,7 +1970,8 @@ mark {
         order: 2;
     }
 
-    .filter-controls>.select-wrap:not(.event-select-wrap) {
+    .filter-controls>.select-wrap:not(.event-select-wrap),
+    .filter-controls>.checkbox-filter {
         flex: 1 1 0;
         min-width: 160px;
     }
@@ -2023,7 +2113,7 @@ mark {
 @media (min-width: 875px) and (max-width: 1174px) {
     .control-toolbar {
         display: grid;
-        grid-template-columns: minmax(150px, 1.2fr) repeat(3, minmax(120px, 1fr)) 44px;
+        grid-template-columns: minmax(150px, 1.1fr) minmax(150px, 1fr) minmax(290px, 2fr) 44px;
         align-items: center;
     }
 
@@ -2048,7 +2138,8 @@ mark {
         grid-row: 2;
     }
 
-    .filter-controls > .select-wrap {
+    .filter-controls > .select-wrap,
+    .filter-controls > .checkbox-filter {
         grid-row: 2;
     }
 
@@ -2056,11 +2147,11 @@ mark {
         grid-column: 2;
     }
 
-    .filter-controls > .select-wrap:nth-child(2) {
+    .filter-controls > .checkbox-filter:nth-child(2) {
         grid-column: 3;
     }
 
-    .filter-controls > .select-wrap:nth-child(3) {
+    .filter-controls > .checkbox-filter:nth-child(3) {
         grid-column: 4;
     }
 
@@ -2073,7 +2164,8 @@ mark {
         display: none;
     }
 
-    .filter-controls > .select-wrap {
+    .filter-controls > .select-wrap,
+    .filter-controls > .checkbox-filter {
         flex: 1 1 0;
         min-width: 0;
     }
@@ -2082,8 +2174,16 @@ mark {
 @media (min-width: 625px) and (max-width: 874px) {
     .filter-controls.open {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
         margin-top: 10px;
+    }
+
+    .filter-controls > .select-wrap {
+        grid-column: 1 / -1;
+    }
+
+    .filter-controls > .checkbox-filter:last-child {
+        grid-column: 1 / -1;
     }
 }

@@ -69,22 +69,28 @@
                             </select>
                             <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
                         </label>
-                        <label class="select-wrap">
-                            <select id="division-filter" aria-label="Filter by division">
-                                <option value="">All divisions</option>
-                            </select>
-                            <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
-                        </label>
-                        <label class="select-wrap">
-                            <select id="status-filter" aria-label="Filter by attendance status">
-                                <option value="">All statuses</option>
-                                <option value="unprocessed">Unprocessed</option>
-                                <option value="present">Present</option>
-                                <option value="absent">Absent</option>
-                                <option value="flagged">Flagged</option>
-                            </select>
-                            <span class="material-symbols-outlined select-arrow" aria-hidden="true">expand_more</span>
-                        </label>
+                        <fieldset id="division-filter" class="checkbox-filter">
+                            <legend>Division</legend>
+                        </fieldset>
+                        <fieldset id="status-filter" class="checkbox-filter">
+                            <legend>Status</legend>
+                            <label class="status-filter-option unprocessed">
+                                <input type="checkbox" value="unprocessed" aria-label="Unprocessed" title="Unprocessed" />
+                                <span class="material-symbols-outlined" aria-hidden="true">question_mark</span>
+                            </label>
+                            <label class="status-filter-option present">
+                                <input type="checkbox" value="present" aria-label="Present" title="Present" />
+                                <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                            </label>
+                            <label class="status-filter-option absent">
+                                <input type="checkbox" value="absent" aria-label="Absent" title="Absent" />
+                                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                            </label>
+                            <label class="status-filter-option flagged">
+                                <input type="checkbox" value="flagged" aria-label="Flagged" title="Flagged" />
+                                <span class="material-symbols-outlined" aria-hidden="true">flag</span>
+                            </label>
+                        </fieldset>
                     </div>
                     <div class="toolbar">
                         <p id="result-count" class="result-count"></p>

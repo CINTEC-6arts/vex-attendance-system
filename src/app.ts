@@ -291,20 +291,30 @@ export function updateToggleTeamsButton(): void {
 }
 
 function updateClearFiltersButton(): void {
-    core.clearFiltersButton.disabled = !core.teamFilter.value && !core.divisionFilter.value && !core.statusFilter.value;
+    core.clearFiltersButton.disabled = !core.teamFilter.value
+        && !core.divisionFilter.querySelector("input:checked")
+        && !core.statusFilter.querySelector("input:checked");
 }
 
 export function render(): void {
     const query = core.state.query.toLowerCase();
+    const selectedDivisions = [...core.divisionFilter.querySelectorAll<HTMLInputElement>("input:checked")]
+        .map((input) => input.value);
+    const selectedStatuses = core.state.statusFilters;
     const searchFiltered = core.state.records.filter((record) => {
         const matchesQuery = !query || [record.teamCode, record.division, record.organisation, record.name]
             .some((value) => value.toLowerCase().includes(query));
         return matchesQuery
             && (!core.state.teamCode || record.teamCode === core.state.teamCode)
-            && (!core.divisionFilter.value || record.division === core.divisionFilter.value);
+            && (!selectedDivisions.length || selectedDivisions.includes(record.division));
     });
-    const matchingTeams = new Set(searchFiltered.filter((record) => !core.state.statusFilter || core.getAttendanceStatus(record) === core.state.statusFilter).map((record) => record.teamCode));
-    const filtered = core.state.statusFilter ? core.state.records.filter((record) => matchingTeams.has(record.teamCode)) : searchFiltered;
+    const matchingTeams = new Set(searchFiltered
+        .filter((record) => !selectedStatuses.length || selectedStatuses.includes(core.getAttendanceStatus(record)))
+        .map((record) => record.teamCode));
+    const filtered = selectedStatuses.length
+        ? core.state.records.filter((record) => matchingTeams.has(record.teamCode)
+            && (!selectedDivisions.length || selectedDivisions.includes(record.division)))
+        : searchFiltered;
     const filteredTeams = new Set(filtered.map((record) => record.teamCode));
 
     core.resultCount.replaceChildren();
@@ -347,7 +357,11 @@ export function render(): void {
     appendStatusTally(flaggedTeamCount, core.AttendanceStatus.FLAGGED, "flagged", "flag");
     core.clearButton.classList.toggle("visible", Boolean(core.state.query));
     updateClearFiltersButton();
-    core.statusElement.textContent = `${filteredTeams.size} shown${core.state.statusFilter ? ` · filtered for ${core.state.statusFilter}` : ""}`;
+    const filterSummary = [
+        selectedDivisions.length ? `divisions: ${selectedDivisions.join(", ")}` : "",
+        selectedStatuses.length ? `statuses: ${selectedStatuses.join(", ")}` : "",
+    ].filter(Boolean).join(" · ");
+    core.statusElement.textContent = `${filteredTeams.size} shown${filterSummary ? ` · ${filterSummary}` : ""}`;
     core.results.replaceChildren();
 
     if (!filteredTeams.size) {
@@ -492,23 +506,25 @@ async function loadEvents() {
 }
 
 function populateDivisions() {
-    core.divisionFilter.replaceChildren(new Option("All divisions", ""));
+    core.divisionFilter.replaceChildren(core.divisionFilter.querySelector("legend")!);
     ["ES", "MS"].forEach((division) => {
-        const option = document.createElement("option");
-        option.value = division;
-        option.textContent = division;
-        core.divisionFilter.append(option);
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.value = division;
+        label.append(input, division);
+        core.divisionFilter.append(label);
     });
 }
 
 function clearEventFilters() {
     core.searchInput.value = "";
     core.teamFilter.value = "";
-    core.divisionFilter.value = "";
-    core.statusFilter.value = "";
+    core.divisionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
+    core.statusFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
     core.state.query = "";
     core.state.teamCode = "";
-    core.state.statusFilter = "";
+    core.state.statusFilters = [];
     core.expandedTeams.clear();
 }
 

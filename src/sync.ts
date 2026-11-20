@@ -752,8 +752,9 @@ core.teamFilter.addEventListener("change", (event) => {
     core.state.teamCode = (event.target as HTMLSelectElement).value;
     core.renderPreservingScrollCallback();
 });
-core.statusFilter.addEventListener("change", (event) => {
-    core.state.statusFilter = (event.target as HTMLSelectElement).value;
+core.statusFilter.addEventListener("change", () => {
+    core.state.statusFilters = [...core.statusFilter.querySelectorAll<HTMLInputElement>("input:checked")]
+        .map((input) => input.value as core.AttendanceStatus);
     core.renderPreservingScrollCallback();
 });
 core.divisionFilter.addEventListener("change", () => {
@@ -762,11 +763,11 @@ core.divisionFilter.addEventListener("change", () => {
 core.clearFiltersButton.addEventListener("click", () => {
     core.searchInput.value = "";
     core.teamFilter.value = "";
-    core.divisionFilter.value = "";
-    core.statusFilter.value = "";
+    core.divisionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
+    core.statusFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
     core.state.query = "";
     core.state.teamCode = "";
-    core.state.statusFilter = "";
+    core.state.statusFilters = [];
     core.renderPreservingScrollCallback();
 });
 core.toggleFiltersButton.addEventListener("click", () => {

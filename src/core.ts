@@ -93,15 +93,15 @@ export const state = {
     eventId: "",
     query: "",
     teamCode: "",
-    statusFilter: "",
+    statusFilters: [] as AttendanceStatus[],
     attendance: JSON.parse(localStorage.getItem("attendance-status") || "{}") as Record<string, AttendanceStatus>,
 };
 export const searchInput = query<HTMLInputElement>("#search");
 export const clearButton = query<HTMLButtonElement>("#clear");
 export const eventFilter = query<HTMLSelectElement>("#event-filter");
 export const teamFilter = query<HTMLSelectElement>("#team-filter");
-export const divisionFilter = query<HTMLSelectElement>("#division-filter");
-export const statusFilter = query<HTMLSelectElement>("#status-filter");
+export const divisionFilter = query<HTMLElement>("#division-filter");
+export const statusFilter = query<HTMLElement>("#status-filter");
 export const clearFiltersButton = query<HTMLButtonElement>("#clear-filters");
 export const controlToolbar = query<HTMLElement>(".control-toolbar");
 export const results = query<HTMLElement>("#results");
