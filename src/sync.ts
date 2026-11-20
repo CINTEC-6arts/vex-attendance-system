@@ -842,6 +842,17 @@ core.toggleTeamsButton.addEventListener("click", () => {
     requestAnimationFrame(maintainAnchor);
 });
 core.results.addEventListener("click", (event) => {
+    const inspectionButton = (event.target as Element).closest<HTMLButtonElement>("[data-team-inspection]");
+    if (inspectionButton) {
+        const team = inspectionButton.dataset.team;
+        const division = inspectionButton.dataset.division;
+        if (!team || (division !== core.Division.ES && division !== core.Division.MS)) return;
+        const key = core.inspectionKey(team, division);
+        core.state.inspection[key] = !core.state.inspection[key];
+        core.saveInspection();
+        core.renderPreservingScrollCallback();
+        return;
+    }
     const teamButton = (event.target as Element).closest<HTMLButtonElement>("[data-team-status]");
     if (teamButton) {
         core.state.records

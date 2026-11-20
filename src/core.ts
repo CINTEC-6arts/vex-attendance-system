@@ -95,6 +95,7 @@ export const state = {
     teamCode: "",
     statusFilters: [] as AttendanceStatus[],
     attendance: JSON.parse(localStorage.getItem("attendance-status") || "{}") as Record<string, AttendanceStatus>,
+    inspection: JSON.parse(localStorage.getItem("inspection-status") || "{}") as Record<string, boolean>,
 };
 export const searchInput = query<HTMLInputElement>("#search");
 export const clearButton = query<HTMLButtonElement>("#clear");
@@ -227,6 +228,15 @@ export function attendanceKey(record: RecordEntry): string {
 }
 export function getAttendanceStatus(record: RecordEntry): AttendanceStatus {
     return state.attendance[attendanceKey(record)] || AttendanceStatus.UNPROCESSED;
+}
+export function inspectionKey(teamCode: string, division: Division): string {
+    return `${state.eventId}:${teamCode}:${division}`;
+}
+export function isTeamInspected(teamCode: string, division: Division): boolean {
+    return state.inspection[inspectionKey(teamCode, division)] === true;
+}
+export function saveInspection(): void {
+    localStorage.setItem("inspection-status", JSON.stringify(state.inspection));
 }
 export function saveAttendance(): void {
     localStorage.setItem("attendance-status", JSON.stringify(state.attendance));

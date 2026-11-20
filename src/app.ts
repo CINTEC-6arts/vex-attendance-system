@@ -400,6 +400,14 @@ export function render(): void {
                 group.style.setProperty("--team-gradient", getTeamGradient(teamRecords));
                 highlightText(core.child<HTMLElement>(group, ".team-code"), `${team} · ${division}`, query);
                 core.child<HTMLElement>(group, ".team-total").textContent = `${records.length} ${records.length === 1 ? "person" : "people"}`;
+                const inspected = core.isTeamInspected(team, division as core.Division);
+                group.classList.toggle("inspected", inspected);
+                const inspectionButton = core.child<HTMLButtonElement>(group, "[data-team-inspection]");
+                inspectionButton.dataset.team = team;
+                inspectionButton.dataset.division = division;
+                inspectionButton.setAttribute("aria-pressed", String(inspected));
+                inspectionButton.title = inspected ? "Mark team as not inspected" : "Mark team as passed inspection";
+                inspectionButton.setAttribute("aria-label", inspectionButton.title);
                 group.querySelectorAll<HTMLButtonElement>("[data-team-status]").forEach((button) => {
                     button.dataset.team = team;
                     button.dataset.division = division;
@@ -416,12 +424,12 @@ export function render(): void {
                 group.classList.toggle("collapsed", !isExpanded);
                 teamHeading.setAttribute("aria-expanded", String(isExpanded));
                 teamHeading.addEventListener("click", (event) => {
-                    if ((event.target as Element).closest("[data-team-status]")) return;
+                    if ((event.target as Element).closest("[data-team-status], [data-team-inspection]")) return;
                     setTeamExpanded(group, group.classList.contains("collapsed"));
                     updateToggleTeamsButton();
                 });
                 teamHeading.addEventListener("keydown", (event) => {
-                    if ((event.target as Element).closest("[data-team-status]")) return;
+                    if ((event.target as Element).closest("[data-team-status], [data-team-inspection]")) return;
                     if (event.key !== "Enter" && event.key !== " ") return;
                     event.preventDefault();
                     teamHeading.click();

@@ -1389,6 +1389,15 @@ mark {
     background-position: left top;
 }
 
+.team-group.inspected {
+    outline-color: #c19aff;
+    box-shadow:
+        0 0 0 2px rgba(193, 154, 255, .95),
+        0 0 28px rgba(146, 86, 255, .72),
+        0 0 52px rgba(112, 52, 220, .42),
+        0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
 .team-group::before {
     position: absolute;
     z-index: -1;
@@ -1508,7 +1517,17 @@ mark {
 
 .team-actions {
     display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 6px;
+
+    &>.divider {
+        display: inline-block;
+        height: 30px;
+        margin-inline: 6px;
+        align-self: center;
+        justify-self: center;
+    }
 }
 
 .team-action {
@@ -1549,6 +1568,22 @@ mark {
 .team-action.unprocessed:hover,
 .team-action.unprocessed:focus-visible {
     color: var(--accent);
+}
+
+.team-action.inspection {
+    color: #b084ff;
+}
+
+.team-action.inspection:hover,
+.team-action.inspection:focus-visible,
+.team-action.inspection[aria-pressed="true"] {
+    border-color: #b084ff;
+    background: #33245c;
+    color: #d3b9ff;
+}
+
+.team-action.inspection[aria-pressed="true"] .material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 600, "GRAD" 0, "opsz" 24;
 }
 
 .team-action .material-symbols-outlined {
@@ -1831,7 +1866,7 @@ mark {
         margin-top: 0;
     }
 
-    .mobile-event-row > #toggle-teams {
+    .mobile-event-row>#toggle-teams {
         margin: 0;
         order: 2;
     }
@@ -1845,16 +1880,16 @@ mark {
         width: 100%;
     }
 
-    .mobile-search-row > .search-wrap {
+    .mobile-search-row>.search-wrap {
         flex: 1 1 auto;
         min-width: 0;
     }
 
-    .mobile-search-row > * {
+    .mobile-search-row>* {
         order: initial;
     }
 
-    .mobile-search-row > .divider {
+    .mobile-search-row>.divider {
         display: none;
         align-self: center;
         justify-self: center;
@@ -1961,7 +1996,7 @@ mark {
         align-items: stretch;
     }
 
-    .control-toolbar > .divider {
+    .control-toolbar>.divider {
         display: none;
     }
 
@@ -2018,8 +2053,9 @@ mark {
 }
 
 @media (max-width: 650px) {
-    .mobile-search-row > .search-wrap,
-    .mobile-search-row > .search-wrap ~ .clear-filters {
+
+    .mobile-search-row>.search-wrap,
+    .mobile-search-row>.search-wrap~.clear-filters {
         order: 0;
     }
 }
@@ -2053,12 +2089,12 @@ mark {
     }
 
     .mobile-event-row .action-button,
-    .mobile-event-row > #toggle-teams {
+    .mobile-event-row>#toggle-teams {
         flex: 0 0 44px;
         margin-top: 0;
     }
 
-    .mobile-event-row > #toggle-teams {
+    .mobile-event-row>#toggle-teams {
         order: 2;
     }
 
@@ -2071,18 +2107,18 @@ mark {
         margin-top: 12px;
     }
 
-    .mobile-search-row > .search-wrap {
+    .mobile-search-row>.search-wrap {
         flex: 1 1 auto;
         min-width: 0;
         order: 0;
     }
 
-    .mobile-search-row > .clear-filters {
+    .mobile-search-row>.clear-filters {
         order: 0;
     }
 
-    .mobile-search-row > .divider,
-    .control-toolbar > .divider {
+    .mobile-search-row>.divider,
+    .control-toolbar>.divider {
         display: none;
     }
 
@@ -2127,31 +2163,31 @@ mark {
         display: contents;
     }
 
-    .mobile-search-row > .search-wrap {
+    .mobile-search-row>.search-wrap {
         grid-column: 1;
         grid-row: 2;
         min-width: 0;
     }
 
-    .mobile-search-row > .clear-filters {
+    .mobile-search-row>.clear-filters {
         grid-column: 5;
         grid-row: 2;
     }
 
-    .filter-controls > .select-wrap,
-    .filter-controls > .checkbox-filter {
+    .filter-controls>.select-wrap,
+    .filter-controls>.checkbox-filter {
         grid-row: 2;
     }
 
-    .filter-controls > .select-wrap:nth-child(1) {
+    .filter-controls>.select-wrap:nth-child(1) {
         grid-column: 2;
     }
 
-    .filter-controls > .checkbox-filter:nth-child(2) {
+    .filter-controls>.checkbox-filter:nth-child(2) {
         grid-column: 3;
     }
 
-    .filter-controls > .checkbox-filter:nth-child(3) {
+    .filter-controls>.checkbox-filter:nth-child(3) {
         grid-column: 4;
     }
 
@@ -2164,8 +2200,8 @@ mark {
         display: none;
     }
 
-    .filter-controls > .select-wrap,
-    .filter-controls > .checkbox-filter {
+    .filter-controls>.select-wrap,
+    .filter-controls>.checkbox-filter {
         flex: 1 1 0;
         min-width: 0;
     }
@@ -2179,11 +2215,11 @@ mark {
         margin-top: 10px;
     }
 
-    .filter-controls > .select-wrap {
+    .filter-controls>.select-wrap {
         grid-column: 1 / -1;
     }
 
-    .filter-controls > .checkbox-filter:last-child {
+    .filter-controls>.checkbox-filter:last-child {
         grid-column: 1 / -1;
     }
 }
