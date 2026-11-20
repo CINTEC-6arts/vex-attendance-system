@@ -296,6 +296,45 @@ function updateClearFiltersButton(): void {
         && !core.statusFilter.querySelector("input:checked");
 }
 
+function getTeamStatusFlags(teamRecords: core.RecordEntry[]): Set<core.AttendanceStatus> {
+    const statuses = new Set<core.AttendanceStatus>();
+    if (teamRecords.length && teamRecords.every((record) =>
+        core.getAttendanceStatus(record) === core.AttendanceStatus.UNPROCESSED
+    )) {
+        statuses.add(core.AttendanceStatus.UNPROCESSED);
+    }
+    if (teamRecords.some((record) =>
+        core.getAttendanceStatus(record) === core.AttendanceStatus.PRESENT
+    )) {
+        statuses.add(core.AttendanceStatus.PRESENT);
+    }
+    if (teamRecords.length && teamRecords.every((record) =>
+        core.getAttendanceStatus(record) === core.AttendanceStatus.ABSENT
+    )) {
+        statuses.add(core.AttendanceStatus.ABSENT);
+    }
+    if (teamRecords.some((record) =>
+        core.getAttendanceStatus(record) === core.AttendanceStatus.FLAGGED
+    )) {
+        statuses.add(core.AttendanceStatus.FLAGGED);
+    }
+    return statuses;
+}
+
+function appendHeadingTally(container: HTMLElement, status: string, count: number, label: string, icon: string): void {
+    const tally = document.createElement("span");
+    tally.className = `heading-tally ${status}`;
+    tally.setAttribute("aria-label", `${count} ${label}`);
+    const countElement = document.createElement("strong");
+    countElement.textContent = String(count);
+    const iconElement = document.createElement("span");
+    iconElement.className = "material-symbols-outlined";
+    iconElement.setAttribute("aria-hidden", "true");
+    iconElement.textContent = icon;
+    tally.append(countElement, iconElement);
+    container.append(tally);
+}
+
 export function render(): void {
     const query = core.state.query.toLowerCase();
     const selectedDivisions = [...core.divisionFilter.querySelectorAll<HTMLInputElement>("input:checked")]
@@ -408,6 +447,25 @@ export function render(): void {
             const organisationGroup = core.organisationTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
             highlightText(core.child<HTMLElement>(organisationGroup, ".organisation-name"), organisation, query);
             core.child<HTMLElement>(organisationGroup, ".organisation-total").textContent = `${teams.length} ${teams.length === 1 ? "team" : "teams"}`;
+            const organisationTallies = core.child<HTMLElement>(organisationGroup, ".organisation-tallies");
+            const organisationStatusCounts = { unprocessed: 0, present: 0, absent: 0, flagged: 0 };
+            teams.forEach(([groupKey]) => {
+                const [team, division] = groupKey.split("|");
+                const teamRecords = core.state.records.filter((record) => record.teamCode === team && record.division === division);
+                getTeamStatusFlags(teamRecords).forEach((status) => {
+                    organisationStatusCounts[status] += 1;
+                });
+            });
+            appendHeadingTally(organisationTallies, "unprocessed", organisationStatusCounts.unprocessed, "unprocessed teams", "question_mark");
+            appendHeadingTally(organisationTallies, "present", organisationStatusCounts.present, "present teams", "check");
+            appendHeadingTally(organisationTallies, "absent", organisationStatusCounts.absent, "absent teams", "close");
+            appendHeadingTally(organisationTallies, "flagged", organisationStatusCounts.flagged, "flagged teams", "flag");
+            const inspectedTeamCount = teams.filter(([groupKey]) => {
+                const [team, division] = groupKey.split("|");
+                return core.isTeamInspected(team, division as core.Division);
+            }).length;
+            appendHeadingTally(organisationTallies, "inspected", inspectedTeamCount, "inspected teams", "fact_check");
+            organisationGroup.style.setProperty("--inspection-percentage", `${teams.length ? inspectedTeamCount / teams.length * 100 : 0}%`);
             const organisationTeams = core.child<HTMLElement>(organisationGroup, ".organisation-teams");
 
             teams.sort(([a], [b]) => a.localeCompare(b)).forEach(([groupKey, records]) => {
@@ -417,6 +475,11 @@ export function render(): void {
                 group.style.setProperty("--team-gradient", getTeamGradient(teamRecords));
                 highlightText(core.child<HTMLElement>(group, ".team-code"), `${team} · ${division}`, query);
                 core.child<HTMLElement>(group, ".team-total").textContent = `${records.length} ${records.length === 1 ? "person" : "people"}`;
+                const teamTallies = core.child<HTMLElement>(group, ".team-status-tallies");
+                appendHeadingTally(teamTallies, "unprocessed", teamRecords.filter((record) => core.getAttendanceStatus(record) === core.AttendanceStatus.UNPROCESSED).length, "unprocessed students", "question_mark");
+                appendHeadingTally(teamTallies, "present", teamRecords.filter((record) => core.getAttendanceStatus(record) === core.AttendanceStatus.PRESENT).length, "present students", "check");
+                appendHeadingTally(teamTallies, "absent", teamRecords.filter((record) => core.getAttendanceStatus(record) === core.AttendanceStatus.ABSENT).length, "absent students", "close");
+                appendHeadingTally(teamTallies, "flagged", teamRecords.filter((record) => core.getAttendanceStatus(record) === core.AttendanceStatus.FLAGGED).length, "flagged students", "flag");
                 const inspected = core.isTeamInspected(team, division as core.Division);
                 group.classList.toggle("inspected", inspected);
                 const inspectionButton = core.child<HTMLButtonElement>(group, "[data-team-inspection]");

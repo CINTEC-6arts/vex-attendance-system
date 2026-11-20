@@ -1374,6 +1374,55 @@ mark {
     font-size: 13px;
 }
 
+.organisation-tallies,
+.team-status-tallies {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.organisation-tallies {
+    margin-left: auto;
+}
+
+.heading-tally {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.heading-tally:not(:first-child)::before {
+    content: "·";
+    margin-right: 3px;
+    color: var(--muted);
+}
+
+.heading-tally strong {
+    color: var(--ink);
+}
+
+.heading-tally .material-symbols-outlined {
+    font-size: 17px;
+}
+
+.heading-tally.present .material-symbols-outlined {
+    color: #58d68d;
+}
+
+.heading-tally.absent .material-symbols-outlined {
+    color: #ff6b78;
+}
+
+.heading-tally.flagged .material-symbols-outlined {
+    color: #ffbd5c;
+}
+
+.heading-tally.inspected .material-symbols-outlined {
+    color: #b084ff;
+    font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+
 .organisation-teams {
     display: grid;
     gap: 10px;
@@ -1527,6 +1576,11 @@ mark {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.team-status-tallies {
+    margin-left: auto;
+    margin-right: 8px;
 }
 
 .team-actions {
@@ -1841,6 +1895,37 @@ mark {
 }
 
 @media (max-width: 650px) {
+    .organisation-heading {
+        flex-wrap: wrap;
+        row-gap: 4px;
+        padding-inline: 12px;
+    }
+
+    .organisation-tallies {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 3px;
+    }
+
+    .organisation-tallies .heading-tally,
+    .team-status-tallies .heading-tally {
+        gap: 1px;
+    }
+
+    .team-heading-content-wrapper {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        row-gap: 6px;
+        padding-inline: 10px;
+    }
+
+    .team-status-tallies {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-content: flex-start;
+        margin: 0;
+    }
+
     .shell {
         padding: 32px 12px 48px;
     }
