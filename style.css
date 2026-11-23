@@ -803,6 +803,12 @@ select:focus {
 }
 
 .error-dialog-action.secondary {
+    display: inline-flex;
+    width: auto;
+    min-width: 104px;
+    height: 42px;
+    padding: 9px 14px;
+    place-items: initial;
     border: 1px solid var(--line-bright);
     background: var(--surface-control);
     color: var(--ink);
