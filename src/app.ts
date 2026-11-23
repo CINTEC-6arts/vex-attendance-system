@@ -392,10 +392,10 @@ export function render(): void {
             return core.isTeamInspected(team, division as core.Division);
         });
     inspectedTeamCount.textContent = String(inspectedTeamKeys.length);
-    const appendStatusTally = (count: HTMLElement, status: core.AttendanceStatus, label: string, icon: string): void => {
+    const appendStatusTally = (count: HTMLElement, status: core.AttendanceStatus, icon: string): void => {
         const tally = document.createElement("span");
         tally.className = `attendance-tally ${status}`;
-        tally.setAttribute("aria-label", `${count.textContent} ${label}`);
+        tally.setAttribute("aria-label", `${count.textContent} ${status} teams`);
         const statusIcon = document.createElement("span");
         statusIcon.className = "material-symbols-outlined tally-icon";
         statusIcon.setAttribute("aria-hidden", "true");
@@ -404,13 +404,13 @@ export function render(): void {
         core.resultCount.append(tally);
     };
     core.resultCount.append(totalTeamCount, " total · ");
-    appendStatusTally(unprocessedTeamCount, core.AttendanceStatus.UNPROCESSED, core.AttendanceStatus.UNPROCESSED, "question_mark");
+    appendStatusTally(unprocessedTeamCount, core.AttendanceStatus.UNPROCESSED, "question_mark");
     core.resultCount.append(" · ");
-    appendStatusTally(presentTeamCount, core.AttendanceStatus.PRESENT, core.AttendanceStatus.PRESENT, "check");
+    appendStatusTally(presentTeamCount, core.AttendanceStatus.PRESENT, "check");
     core.resultCount.append(" · ");
-    appendStatusTally(absentTeamCount, core.AttendanceStatus.ABSENT, core.AttendanceStatus.ABSENT, "close");
+    appendStatusTally(absentTeamCount, core.AttendanceStatus.ABSENT, "close");
     core.resultCount.append(" · ");
-    appendStatusTally(flaggedTeamCount, core.AttendanceStatus.FLAGGED, core.AttendanceStatus.FLAGGED, "flag");
+    appendStatusTally(flaggedTeamCount, core.AttendanceStatus.FLAGGED, "flag");
     core.resultCount.append(" · ");
     const inspectionTally = document.createElement("span");
     inspectionTally.className = "attendance-tally inspected";
@@ -467,15 +467,15 @@ export function render(): void {
                     organisationStatusCounts[status] += 1;
                 });
             });
-            appendHeadingTally(organisationTallies, "unprocessed", organisationStatusCounts.unprocessed, "unprocessed teams", "question_mark");
-            appendHeadingTally(organisationTallies, "present", organisationStatusCounts.present, "present teams", "check");
-            appendHeadingTally(organisationTallies, "absent", organisationStatusCounts.absent, "absent teams", "close");
-            appendHeadingTally(organisationTallies, "flagged", organisationStatusCounts.flagged, "flagged teams", "flag");
+            appendHeadingTally(organisationTallies, core.AttendanceStatus.UNPROCESSED, organisationStatusCounts.unprocessed, `${core.AttendanceStatus.UNPROCESSED} teams`, "question_mark");
+            appendHeadingTally(organisationTallies, core.AttendanceStatus.PRESENT, organisationStatusCounts.present, `${core.AttendanceStatus.PRESENT} teams`, "check");
+            appendHeadingTally(organisationTallies, core.AttendanceStatus.ABSENT, organisationStatusCounts.absent, `${core.AttendanceStatus.ABSENT} teams`, "close");
+            appendHeadingTally(organisationTallies, core.AttendanceStatus.FLAGGED, organisationStatusCounts.flagged, `${core.AttendanceStatus.FLAGGED} teams`, "flag");
             const inspectedTeamCount = teams.filter(([groupKey]) => {
                 const [team, division] = groupKey.split("|");
                 return core.isTeamInspected(team, division as core.Division);
             }).length;
-            appendHeadingTally(organisationTallies, "inspected", inspectedTeamCount, "inspected teams", "fact_check");
+            appendHeadingTally(organisationTallies, core.InspectionStatus.INSPECTED, inspectedTeamCount, `${core.InspectionStatus.INSPECTED} teams`, "fact_check");
             organisationGroup.style.setProperty("--inspection-percentage", `${teams.length ? inspectedTeamCount / teams.length * 100 : 0}%`);
             const organisationTeams = core.child<HTMLElement>(organisationGroup, ".organisation-teams");
 
