@@ -3,18 +3,21 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "bun run _prebuild && bun build index.html --outdir=dist --sourcemap=external",
-        "watch": "bun run _prebuild && bun build index.html --outdir=dist --sourcemap=external --watch",
-        "_prebuild": "bun run _clean-dist && bun run _copy-assets && bun run _generate-events",
+        "build": "bun run _prebuild && bun build index.html --outdir=dist --sourcemap=external --minify",
+        "watch": "bun run _prebuild && bun build index.html --outdir=dist --sourcemap=external --minify --watch",
+        "_prebuild": "bun run _clean-dist && bun run _pack-data",
         "_clean-dist": "bun scripts/clean-dist.ts",
-        "_copy-assets": "bun scripts/copy-assets.ts",
-        "_generate-events": "bun scripts/generate-events.ts",
+        "_pack-data": "bun scripts/pack-data.ts",
         "typecheck": "tsc --noEmit"
     },
     "devDependencies": {
+        "@types/archiver": "^8.0.0",
         "@types/bun": "latest",
-        "@types/node": "latest",
+        "@types/node": "^26.6.6",
         "@types/qrcode": "^1.5.6",
+        "archiver": "^8.0.0",
+        "inherits": "^2.0.4",
+        "minimatch": "^11.0.9",
         "typescript": "latest"
     },
     "dependencies": {
