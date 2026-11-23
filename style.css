@@ -308,6 +308,12 @@ select {
     text-shadow: 0 0 4px #fff;
 }
 
+#division-filter label:has(input:checked):hover,
+#division-filter label:has(input:checked):has(input:focus-visible) {
+    border-color: var(--line);
+    background: #1b2944;
+}
+
 #division-filter label {
     width: 30px;
     justify-content: center;
