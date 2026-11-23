@@ -1334,6 +1334,10 @@ select:focus {
     font-size: 17px;
 }
 
+.attendance-tally.unprocessed .tally-icon {
+    color: var(--accent);
+}
+
 .attendance-tally.present .tally-icon {
     color: #58d68d;
 }
