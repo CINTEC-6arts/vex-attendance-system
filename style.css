@@ -2354,7 +2354,7 @@ mark {
     }
 }
 
-@media (max-width: 1174px) {
+@media (max-width: 1234px) {
     .control-toolbar {
         align-items: stretch;
     }
@@ -2392,7 +2392,7 @@ mark {
     }
 }
 
-@media (min-width: 1175px) {
+@media (min-width: 1235px) {
     .filter-controls>* {
         order: 2;
     }
@@ -2423,7 +2423,7 @@ mark {
     }
 }
 
-@media (min-width: 651px) and (max-width: 1174px) {
+@media (min-width: 651px) and (max-width: 1234px) {
     .control-toolbar {
         display: block;
         margin: 0 0 20px;
@@ -2509,7 +2509,7 @@ mark {
     }
 }
 
-@media (min-width: 875px) and (max-width: 1174px) {
+@media (min-width: 875px) and (max-width: 1234px) {
     .control-toolbar {
         display: grid;
         grid-template-columns: minmax(150px, 1.1fr) minmax(150px, 1fr) minmax(290px, 2fr) 44px;
