@@ -101,7 +101,7 @@ export const state = {
     divisionFilters: [] as Division[],
     inspectionFilters: [] as InspectionStatus[],
     attendance: JSON.parse(localStorage.getItem("attendance-status") || "{}") as Record<string, AttendanceStatus>,
-    inspection: JSON.parse(localStorage.getItem("inspection-status") || "{}") as Record<string, InspectionStatus | boolean>,
+    inspection: JSON.parse(localStorage.getItem("inspection-status") || "{}") as Record<string, InspectionStatus>,
 };
 export const searchInput = query<HTMLInputElement>("#search");
 export const clearButton = query<HTMLButtonElement>("#clear");
@@ -240,8 +240,7 @@ export function inspectionKey(teamCode: string, division: Division): string {
     return `${state.eventId}:${teamCode}:${division}`;
 }
 export function isTeamInspected(teamCode: string, division: Division): boolean {
-    const status = state.inspection[inspectionKey(teamCode, division)];
-    return status === true || status === InspectionStatus.INSPECTED;
+    return state.inspection[inspectionKey(teamCode, division)] === InspectionStatus.INSPECTED;
 }
 export function saveInspection(): void {
     localStorage.setItem("inspection-status", JSON.stringify(state.inspection));
