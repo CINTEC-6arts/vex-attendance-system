@@ -204,7 +204,7 @@ function getTeamGradient(records: core.RecordEntry[], width: number | null = nul
         [core.AttendanceStatus.ABSENT]: "#702b32",
         [core.AttendanceStatus.FLAGGED]: "#73500d",
     };
-    const statuses = Object.values(core.AttendanceStatus);
+    const statuses = [core.AttendanceStatus.PRESENT, core.AttendanceStatus.ABSENT, core.AttendanceStatus.FLAGGED, core.AttendanceStatus.UNPROCESSED];
     const total = records.length;
     let position = 0;
     const stops: string[] = [];
@@ -344,9 +344,7 @@ export function render(): void {
         const matchesQuery = !query || [record.teamCode, record.division, record.organisation, record.name]
             .some((value) => value.toLowerCase().includes(query));
         const matchesInspection = !selectedInspectionFilters.length
-            || selectedInspectionFilters.includes(core.isTeamInspected(record.teamCode, record.division)
-                ? core.InspectionStatus.INSPECTED
-                : core.InspectionStatus.NOT_INSPECTED);
+            || selectedInspectionFilters.includes(core.getTeamInspectionStatus(record.teamCode, record.division));
         return matchesQuery
             && (!core.state.teamCode || record.teamCode === core.state.teamCode)
             && (!selectedDivisions.length || selectedDivisions.includes(record.division))
@@ -392,6 +390,13 @@ export function render(): void {
             return core.isTeamInspected(team, division as core.Division);
         });
     inspectedTeamCount.textContent = String(inspectedTeamKeys.length);
+    const partiallyInspectedTeamCount = document.createElement("strong");
+    const partiallyInspectedTeamKeys = [...new Set(core.state.records.map((record) => `${record.teamCode}|${record.division}`))]
+        .filter((teamKey) => {
+            const [team, division] = teamKey.split("|");
+            return core.getTeamInspectionStatus(team, division as core.Division) === core.InspectionStatus.PARTIALLY_INSPECTED;
+        });
+    partiallyInspectedTeamCount.textContent = String(partiallyInspectedTeamKeys.length);
     const appendStatusTally = (count: HTMLElement, status: core.AttendanceStatus, icon: string): void => {
         const tally = document.createElement("span");
         tally.className = `attendance-tally ${status}`;
@@ -421,6 +426,16 @@ export function render(): void {
     inspectionIcon.textContent = "fact_check";
     inspectionTally.append(inspectedTeamCount, inspectionIcon);
     core.resultCount.append(inspectionTally);
+    core.resultCount.append(" · ");
+    const partialInspectionTally = document.createElement("span");
+    partialInspectionTally.className = "attendance-tally partially-inspected";
+    partialInspectionTally.setAttribute("aria-label", `${partiallyInspectedTeamCount.textContent} teams partially inspected`);
+    const partialInspectionIcon = document.createElement("span");
+    partialInspectionIcon.className = "material-symbols-outlined tally-icon";
+    partialInspectionIcon.setAttribute("aria-hidden", "true");
+    partialInspectionIcon.textContent = "stroke_partial";
+    partialInspectionTally.append(partiallyInspectedTeamCount, partialInspectionIcon);
+    core.resultCount.append(partialInspectionTally);
     core.clearButton.classList.toggle("visible", Boolean(core.state.query));
     updateClearFiltersButton();
     const isFiltered = Boolean(query)
@@ -476,6 +491,11 @@ export function render(): void {
                 return core.isTeamInspected(team, division as core.Division);
             }).length;
             appendHeadingTally(organisationTallies, core.InspectionStatus.INSPECTED, inspectedTeamCount, `${core.InspectionStatus.INSPECTED} teams`, "fact_check");
+            const partiallyInspectedTeamCount = teams.filter(([groupKey]) => {
+                const [team, division] = groupKey.split("|");
+                return core.getTeamInspectionStatus(team, division as core.Division) === core.InspectionStatus.PARTIALLY_INSPECTED;
+            }).length;
+            appendHeadingTally(organisationTallies, core.InspectionStatus.PARTIALLY_INSPECTED, partiallyInspectedTeamCount, "partially inspected teams", "stroke_partial");
             organisationGroup.style.setProperty("--inspection-percentage", `${teams.length ? inspectedTeamCount / teams.length * 100 : 0}%`);
             const organisationTeams = core.child<HTMLElement>(organisationGroup, ".organisation-teams");
 
@@ -486,14 +506,25 @@ export function render(): void {
                 group.style.setProperty("--team-gradient", getTeamGradient(teamRecords));
                 highlightText(core.child<HTMLElement>(group, ".team-code"), `${team} · ${division}`, query);
                 core.child<HTMLElement>(group, ".team-total").textContent = `${records.length} ${records.length === 1 ? "person" : "people"}`;
-                const inspected = core.isTeamInspected(team, division as core.Division);
-                group.classList.toggle("inspected", inspected);
+                const inspectionStatus = core.getTeamInspectionStatus(team, division as core.Division);
+                group.classList.toggle("inspected", inspectionStatus === core.InspectionStatus.INSPECTED);
+                group.classList.toggle("partially-inspected", inspectionStatus === core.InspectionStatus.PARTIALLY_INSPECTED);
                 const inspectionButton = core.child<HTMLButtonElement>(group, "[data-team-inspection]");
                 inspectionButton.dataset.team = team;
                 inspectionButton.dataset.division = division;
-                inspectionButton.setAttribute("aria-pressed", String(inspected));
-                inspectionButton.title = inspected ? "Mark team as not inspected" : "Mark team as passed inspection";
+                inspectionButton.dataset.inspectionStatus = inspectionStatus;
+                inspectionButton.setAttribute("aria-pressed", String(inspectionStatus !== core.InspectionStatus.NOT_INSPECTED));
+                inspectionButton.title = inspectionStatus === core.InspectionStatus.INSPECTED
+                    ? "Mark team as partially inspected"
+                    : inspectionStatus === core.InspectionStatus.PARTIALLY_INSPECTED
+                        ? "Mark team as not inspected"
+                        : "Mark team as passed inspection";
                 inspectionButton.setAttribute("aria-label", inspectionButton.title);
+                core.child<HTMLElement>(inspectionButton, ".material-symbols-outlined").textContent = inspectionStatus === core.InspectionStatus.INSPECTED
+                    ? "fact_check"
+                    : inspectionStatus === core.InspectionStatus.PARTIALLY_INSPECTED
+                        ? "stroke_partial"
+                        : "cancel_presentation";
                 group.querySelectorAll<HTMLButtonElement>("[data-team-status]").forEach((button) => {
                     button.dataset.team = team;
                     button.dataset.division = division;

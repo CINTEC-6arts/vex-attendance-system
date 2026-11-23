@@ -855,9 +855,12 @@ core.results.addEventListener("click", (event) => {
         const division = inspectionButton.dataset.division;
         if (!team || (division !== core.Division.ES && division !== core.Division.MS)) return;
         const key = core.inspectionKey(team, division);
-        core.state.inspection[key] = core.state.inspection[key] === core.InspectionStatus.INSPECTED
-            ? core.InspectionStatus.NOT_INSPECTED
-            : core.InspectionStatus.INSPECTED;
+        const currentStatus = core.getTeamInspectionStatus(team, division);
+        core.state.inspection[key] = currentStatus === core.InspectionStatus.INSPECTED
+            ? core.InspectionStatus.PARTIALLY_INSPECTED
+            : currentStatus === core.InspectionStatus.PARTIALLY_INSPECTED
+                ? core.InspectionStatus.NOT_INSPECTED
+                : core.InspectionStatus.INSPECTED;
         core.saveInspection();
         core.renderPreservingScrollCallback();
         return;

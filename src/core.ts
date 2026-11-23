@@ -23,6 +23,7 @@ export enum AttendanceStatus {
 }
 export enum InspectionStatus {
     INSPECTED = "inspected",
+    PARTIALLY_INSPECTED = "partially-inspected",
     NOT_INSPECTED = "not-inspected"
 }
 export enum Division {
@@ -241,6 +242,9 @@ export function inspectionKey(teamCode: string, division: Division): string {
 }
 export function isTeamInspected(teamCode: string, division: Division): boolean {
     return state.inspection[inspectionKey(teamCode, division)] === InspectionStatus.INSPECTED;
+}
+export function getTeamInspectionStatus(teamCode: string, division: Division): InspectionStatus {
+    return state.inspection[inspectionKey(teamCode, division)] || InspectionStatus.NOT_INSPECTED;
 }
 export function saveInspection(): void {
     localStorage.setItem("inspection-status", JSON.stringify(state.inspection));
