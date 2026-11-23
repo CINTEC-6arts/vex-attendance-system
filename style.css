@@ -274,14 +274,43 @@ select {
 }
 
 .checkbox-filter input {
-    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
     flex: 0 0 16px;
-    width: 16px;
-    max-width: 16px;
-    min-height: 16px;
-    height: 16px;
-    margin: 0;
-    padding: 0;
+    min-height: 1px;
+    max-width: 1px;
+    margin: -1px;
+    overflow: hidden;
+}
+
+.checkbox-filter label:has(input:checked) .material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 600, "GRAD" 0, "opsz" 24;
+    filter: drop-shadow(0 0 4px currentColor);
+}
+
+.checkbox-filter label:not(:has(input:checked)) {
+    color: var(--muted);
+}
+
+.checkbox-filter label:not(:has(input:checked)) .material-symbols-outlined {
+    color: var(--muted);
+    filter: none;
+    opacity: .65;
+}
+
+#division-filter label:has(input:checked) {
+    border-color: transparent;
+    background: transparent;
+    color: #fff;
+    text-shadow: 0 0 4px #fff;
+}
+
+#division-filter label {
+    width: 30px;
+    justify-content: center;
 }
 
 .status-filter-option.unprocessed input {
