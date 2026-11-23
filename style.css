@@ -299,13 +299,16 @@ select {
     border: none;
     border-radius: 6px;
     background: transparent;
-    /* color: var(--muted); */
     color: var(--accent);
     cursor: pointer;
 
     &:hover {
         outline: 1px solid var(--line);
         background: var(--surface-hover);
+    }
+
+    &>span {
+        pointer-events: none;
     }
 }
 
@@ -1655,7 +1658,7 @@ mark {
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 9;
+    z-index: 0;
     content: "";
     pointer-events: none;
     outline: 2px solid var(--inspection);
@@ -1672,7 +1675,7 @@ mark {
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 9;
+    z-index: 0;
     content: "";
     pointer-events: none;
     outline: 2px dashed var(--inspection);
@@ -1941,6 +1944,8 @@ mark {
 }
 
 .team-members {
+    position: relative;
+    z-index: 1;
     max-height: 0;
     width: 100%;
     max-width: none;

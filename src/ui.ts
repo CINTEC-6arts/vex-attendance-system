@@ -49,7 +49,6 @@ core.statusModeToggle.addEventListener("click", () => {
     core.statusFilterLabel.textContent = teamMode ? "Team Status" : "Student Status";
     const modeIcon = core.child<HTMLElement>(core.statusModeToggle, ".material-symbols-outlined");
     modeIcon.textContent = teamMode ? "groups" : "person";
-    modeIcon.title = teamMode ? "Team Status" : "Student Status";
     core.renderPreservingScrollCallback();
 });
 
