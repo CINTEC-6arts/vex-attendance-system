@@ -752,27 +752,17 @@ core.teamFilter.addEventListener("change", (event) => {
     core.state.teamCode = (event.target as HTMLSelectElement).value;
     core.renderPreservingScrollCallback();
 });
-function normalizeFilterSelection(fieldset: HTMLElement): HTMLInputElement[] {
-    const inputs = [...fieldset.querySelectorAll<HTMLInputElement>("input")];
-    const selected = inputs.filter((input) => input.checked);
-    if (inputs.length && selected.length === inputs.length) {
-        inputs.forEach((input) => { input.checked = false; });
-        return [];
-    }
-    return selected;
-}
 core.statusFilter.addEventListener("change", () => {
-    core.state.statusFilters = normalizeFilterSelection(core.statusFilter)
+    core.state.statusFilters = [...core.statusFilter.querySelectorAll<HTMLInputElement>("input:checked")]
         .map((input) => input.value as core.AttendanceStatus);
     core.renderPreservingScrollCallback();
 });
 core.inspectionFilter.addEventListener("change", () => {
-    core.state.inspectionFilters = normalizeFilterSelection(core.inspectionFilter)
+    core.state.inspectionFilters = [...core.inspectionFilter.querySelectorAll<HTMLInputElement>("input:checked")]
         .map((input) => input.value as core.InspectionStatus);
     core.renderPreservingScrollCallback();
 });
 core.divisionFilter.addEventListener("change", () => {
-    normalizeFilterSelection(core.divisionFilter);
     core.renderPreservingScrollCallback();
 });
 core.clearFiltersButton.addEventListener("click", () => {
