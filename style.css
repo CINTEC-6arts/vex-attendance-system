@@ -782,9 +782,8 @@ select:focus {
 }
 
 .error-dialog-actions {
-    display: grid;
-    grid-template-columns: repeat(2, 112px);
-    justify-content: center;
+    display: flex;
+    justify-content: flex-end;
     gap: 10px;
     margin-top: 20px;
 }
