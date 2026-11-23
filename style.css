@@ -265,6 +265,10 @@ select {
     color: #b084ff;
 }
 
+.inspection-filter-option input {
+    accent-color: #b084ff;
+}
+
 .checkbox-filter input {
     display: block;
     flex: 0 0 16px;
