@@ -329,6 +329,7 @@ function appendHeadingTally(container: HTMLElement, status: string, count: numbe
     const iconElement = document.createElement("span");
     iconElement.className = "material-symbols-outlined";
     iconElement.setAttribute("aria-hidden", "true");
+    iconElement.title = label;
     iconElement.textContent = icon;
     tally.append(countElement, iconElement);
     container.append(tally);
@@ -414,11 +415,12 @@ export function render(): void {
         const statusIcon = document.createElement("span");
         statusIcon.className = "material-symbols-outlined tally-icon";
         statusIcon.setAttribute("aria-hidden", "true");
+        statusIcon.title = `${count.textContent} ${status} teams`;
         statusIcon.textContent = icon;
         tally.append(count, statusIcon);
         core.resultCount.append(tally);
     };
-    core.resultCount.append(totalTeamCount, " total · ");
+    core.resultCount.append(totalTeamCount, " teams total · ");
     appendStatusTally(unprocessedTeamCount, core.AttendanceStatus.UNPROCESSED, "question_mark");
     core.resultCount.append(" · ");
     appendStatusTally(presentTeamCount, core.AttendanceStatus.PRESENT, "check");
@@ -433,6 +435,7 @@ export function render(): void {
     const inspectionIcon = document.createElement("span");
     inspectionIcon.className = "material-symbols-outlined tally-icon";
     inspectionIcon.setAttribute("aria-hidden", "true");
+    inspectionIcon.title = `${inspectedTeamCount.textContent} teams inspected`;
     inspectionIcon.textContent = "fact_check";
     inspectionTally.append(inspectedTeamCount, inspectionIcon);
     core.resultCount.append(inspectionTally);
@@ -443,6 +446,7 @@ export function render(): void {
     const partialInspectionIcon = document.createElement("span");
     partialInspectionIcon.className = "material-symbols-outlined tally-icon";
     partialInspectionIcon.setAttribute("aria-hidden", "true");
+    partialInspectionIcon.title = `${partiallyInspectedTeamCount.textContent} teams partially inspected`;
     partialInspectionIcon.textContent = "stroke_partial";
     partialInspectionTally.append(partiallyInspectedTeamCount, partialInspectionIcon);
     core.resultCount.append(partialInspectionTally);

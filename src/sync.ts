@@ -667,7 +667,9 @@ async function applySyncPayload(raw: string, liveInitial: boolean = false): Prom
     ].map(([status, label, icon]) => {
         const item = core.syncStatusTallyTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
         item.classList.add(status as string);
-        core.child<HTMLElement>(item, ".sync-tally-icon").textContent = icon as string;
+        const tallyIcon = core.child<HTMLElement>(item, ".sync-tally-icon");
+        tallyIcon.textContent = icon as string;
+        tallyIcon.title = label as string;
         core.child<HTMLElement>(item, ".sync-tally-count").textContent = String(importedCounts.get(status as core.AttendanceStatus) || 0);
         core.child<HTMLElement>(item, ".sync-tally-label").textContent = label as string;
         return item;
@@ -701,6 +703,7 @@ async function applySyncPayload(raw: string, liveInitial: boolean = false): Prom
             const icon = document.createElement("span");
             icon.className = `material-symbols-outlined sync-status-icon ${status}`;
             icon.setAttribute("aria-hidden", "true");
+            icon.title = status;
             icon.textContent = statusIcons[status];
             const statusLabel = document.createElement("span");
             statusLabel.className = "sync-status-label";
@@ -768,7 +771,9 @@ core.statusModeToggle.addEventListener("click", () => {
     core.statusModeToggle.setAttribute("aria-label", teamMode ? "Switch to student status filter" : "Switch to team status filter");
     core.statusModeToggle.title = teamMode ? "Switch to student status filter" : "Switch to team status filter";
     core.statusFilterLabel.textContent = teamMode ? "Team Status" : "Student Status";
-    core.child<HTMLElement>(core.statusModeToggle, ".material-symbols-outlined").textContent = teamMode ? "groups" : "person";
+    const modeIcon = core.child<HTMLElement>(core.statusModeToggle, ".material-symbols-outlined");
+    modeIcon.textContent = teamMode ? "groups" : "person";
+    modeIcon.title = teamMode ? "Team Status" : "Student Status";
     core.renderPreservingScrollCallback();
 });
 core.inspectionFilter.addEventListener("change", () => {
