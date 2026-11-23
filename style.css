@@ -283,13 +283,13 @@ select {
 }
 
 #status-filter legend {
-    margin-left: 5px;
+    gap: 4px;
+    margin-left: 0;
 }
 
 .status-mode-toggle {
-    position: absolute;
-    left: 1px;
-    top: -5px;
+    position: relative;
+    flex: 0 0 20px;
     width: 20px;
     height: 18px;
     display: inline-flex;
@@ -2158,6 +2158,85 @@ mark {
     color: var(--danger-ink);
 }
 
+@media (hover: none),
+(pointer: coarse) {
+
+    button,
+    select,
+    input,
+    .team-heading,
+    .person-row {
+        touch-action: manipulation;
+    }
+
+    .team-action {
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+    }
+}
+
+@media (max-width: 1234px) {
+    .control-toolbar {
+        align-items: stretch;
+    }
+
+    .control-toolbar>.divider {
+        display: none;
+    }
+
+    .mobile-search-row>.search-wrap {
+        flex: 1 1 100%;
+        order: 2;
+    }
+
+    .filter-controls>.select-wrap:not(.event-select-wrap),
+    .filter-controls>.checkbox-filter {
+        flex: 1 1 0;
+        min-width: 160px;
+    }
+
+    .filter-controls .select-wrap select {
+        width: 100%;
+    }
+
+    .mobile-event-row>.event-select-wrap {
+        flex: 1 1 0;
+    }
+
+    .mobile-event-row>.actions {
+        order: 1;
+    }
+
+    .mobile-search-row>.search-wrap~.select-wrap,
+    .mobile-search-row>.search-wrap~.clear-filters {
+        order: 3;
+    }
+}
+
+@media (min-width: 1235px) {
+    .filter-controls>* {
+        order: 2;
+    }
+
+    .mobile-search-row>#clear-filters,
+    .mobile-search-row>.divider {
+        order: 3;
+    }
+
+    .mobile-event-row>#toggle-teams {
+        order: 4;
+    }
+
+    .toolbar {
+        order: 5;
+    }
+
+    .loading-progress {
+        order: 6;
+    }
+}
+
 @media (max-width: 650px) {
     .organisation-heading {
         flex-wrap: wrap;
@@ -2334,89 +2413,6 @@ mark {
         padding: 10px;
     }
 
-}
-
-@media (hover: none),
-(pointer: coarse) {
-
-    button,
-    select,
-    input,
-    .team-heading,
-    .person-row {
-        touch-action: manipulation;
-    }
-
-    .team-action {
-        width: 44px;
-        min-width: 44px;
-        height: 44px;
-    }
-}
-
-@media (max-width: 1234px) {
-    .control-toolbar {
-        align-items: stretch;
-    }
-
-    .control-toolbar>.divider {
-        display: none;
-    }
-
-    .mobile-search-row>.search-wrap {
-        flex: 1 1 100%;
-        order: 2;
-    }
-
-    .filter-controls>.select-wrap:not(.event-select-wrap),
-    .filter-controls>.checkbox-filter {
-        flex: 1 1 0;
-        min-width: 160px;
-    }
-
-    .filter-controls .select-wrap select {
-        width: 100%;
-    }
-
-    .mobile-event-row>.event-select-wrap {
-        flex: 1 1 0;
-    }
-
-    .mobile-event-row>.actions {
-        order: 1;
-    }
-
-    .mobile-search-row>.search-wrap~.select-wrap,
-    .mobile-search-row>.search-wrap~.clear-filters {
-        order: 3;
-    }
-}
-
-@media (min-width: 1235px) {
-    .filter-controls>* {
-        order: 2;
-    }
-
-    .mobile-search-row>#clear-filters,
-    .mobile-search-row>.divider {
-        order: 3;
-    }
-
-    .mobile-event-row>#toggle-teams {
-        order: 4;
-    }
-
-    .toolbar {
-        order: 5;
-    }
-
-    .loading-progress {
-        order: 6;
-    }
-}
-
-@media (max-width: 650px) {
-
     .mobile-search-row>.search-wrap,
     .mobile-search-row>.search-wrap~.clear-filters {
         order: 0;
@@ -2512,12 +2508,30 @@ mark {
 @media (min-width: 875px) and (max-width: 1234px) {
     .control-toolbar {
         display: grid;
-        grid-template-columns: minmax(150px, 1.1fr) minmax(150px, 1fr) minmax(290px, 2fr) 44px;
+        grid-template-columns: minmax(150px, 1.3fr) 96px minmax(220px, 1fr) 44px 44px 44px;
+        grid-template-rows: 44px 44px auto;
+        gap: 8px;
         align-items: center;
     }
 
     .mobile-event-row {
-        grid-column: 1 / -1;
+        display: contents;
+    }
+
+    .mobile-event-row>.event-select-wrap {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .mobile-event-row>.actions {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+    }
+
+    #toggle-teams {
+        grid-column: 6;
+        grid-row: 1;
     }
 
     .mobile-search-row,
@@ -2527,14 +2541,16 @@ mark {
     }
 
     .mobile-search-row>.search-wrap {
-        grid-column: 1;
-        grid-row: 2;
+        grid-column: 3 / 6;
+        grid-row: 1;
+        align-self: stretch;
+        justify-self: stretch;
         min-width: 0;
+        width: 100%;
     }
 
-    .mobile-search-row>.clear-filters {
-        grid-column: 5;
-        grid-row: 2;
+    .mobile-search-row>#toggle-filters {
+        display: none;
     }
 
     .filter-controls>.select-wrap,
@@ -2543,15 +2559,30 @@ mark {
     }
 
     .filter-controls>.select-wrap:nth-child(1) {
-        grid-column: 2;
+        grid-column: 1;
     }
 
     .filter-controls>.checkbox-filter:nth-child(2) {
-        grid-column: 3;
+        grid-column: 2;
     }
 
     .filter-controls>.checkbox-filter:nth-child(3) {
-        grid-column: 4;
+        grid-column: 3;
+    }
+
+    .filter-controls>.checkbox-filter:nth-child(4) {
+        grid-column: 4 / 6;
+        min-width: 88px;
+    }
+
+    .mobile-search-row>#clear-filters {
+        grid-column: 6;
+        grid-row: 2;
+        justify-self: end;
+    }
+
+    .toolbar {
+        grid-row: 3;
     }
 
     .toolbar,
@@ -2566,6 +2597,25 @@ mark {
     .filter-controls>.select-wrap,
     .filter-controls>.checkbox-filter {
         flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .filter-controls>.checkbox-filter {
+        justify-content: center;
+        padding-inline: 4px;
+    }
+
+    .filter-controls>.checkbox-filter label {
+        gap: 2px;
+        padding-inline: 2px;
+    }
+
+    .filter-controls>.select-wrap {
+        min-width: 0;
+    }
+
+    .filter-controls>.select-wrap select {
+        width: 100%;
         min-width: 0;
     }
 }
