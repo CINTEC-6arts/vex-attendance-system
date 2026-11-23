@@ -418,13 +418,11 @@ export function render(): void {
     core.resultCount.append(inspectionTally);
     core.clearButton.classList.toggle("visible", Boolean(core.state.query));
     updateClearFiltersButton();
-    const matchesSelection = (selected: string[], defaults: string[]): boolean =>
-        selected.length === defaults.length && defaults.every((value) => selected.includes(value));
     const isFiltered = Boolean(query)
         || Boolean(core.state.teamCode)
-        || !matchesSelection(selectedDivisions, ["ES", "MS"])
-        || !matchesSelection(selectedStatuses, ["unprocessed", "present", "absent", "flagged"])
-        || !matchesSelection(selectedInspectionFilters, ["inspected", "not-inspected"]);
+        || selectedDivisions.length > 0
+        || selectedStatuses.length > 0
+        || selectedInspectionFilters.length > 0;
     core.statusElement.textContent = `${filteredTeams.size} shown${isFiltered ? " · filtered" : ""}`;
     core.results.replaceChildren();
 
@@ -601,29 +599,16 @@ async function loadEvents() {
     core.state.eventId = "";
 }
 
-function populateDivisions() {
-    core.divisionFilter.replaceChildren(core.divisionFilter.querySelector("legend")!);
-    ["ES", "MS"].forEach((division) => {
-        const label = document.createElement("label");
-        const input = document.createElement("input");
-        input.type = "checkbox";
-        input.value = division;
-        input.checked = true;
-        label.append(input, division);
-        core.divisionFilter.append(label);
-    });
-}
-
 function clearEventFilters() {
     core.searchInput.value = "";
     core.teamFilter.value = "";
-    core.divisionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = true; });
-    core.statusFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = true; });
-    core.inspectionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = true; });
+    core.divisionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
+    core.statusFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
+    core.inspectionFilter.querySelectorAll<HTMLInputElement>("input").forEach((input) => { input.checked = false; });
     core.state.query = "";
     core.state.teamCode = "";
-    core.state.statusFilters = ["unprocessed", "present", "absent", "flagged"] as core.AttendanceStatus[];
-    core.state.inspectionFilters = ["inspected", "not-inspected"];
+    core.state.statusFilters = [];
+    core.state.inspectionFilters = [];
     core.expandedTeams.clear();
 }
 
@@ -662,7 +647,6 @@ core.setRenderPreservingScrollCallback(renderPreservingScroll);
 
 export function initApp(): void {
     core.statusElement.textContent = "Loading core.events...";
-    populateDivisions();
     void loadEvents()
         .then(() => {
             populateEvents();
