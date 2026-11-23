@@ -458,8 +458,8 @@ select:focus {
 
 #sync-attendance {
     border-color: var(--accent);
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--accent);
+    color: #fff;
 }
 
 .material-symbols-outlined {
