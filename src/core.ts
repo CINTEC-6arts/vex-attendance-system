@@ -99,6 +99,7 @@ export const state = {
     query: "",
     teamCode: "",
     statusFilters: [] as AttendanceStatus[],
+    statusFilterMode: "team" as "student" | "team",
     divisionFilters: [] as Division[],
     inspectionFilters: [] as InspectionStatus[],
     attendance: JSON.parse(localStorage.getItem("attendance-status") || "{}") as Record<string, AttendanceStatus>,
@@ -111,6 +112,8 @@ export const teamFilter = query<HTMLSelectElement>("#team-filter");
 export const divisionFilter = query<HTMLElement>("#division-filter");
 export const statusFilter = query<HTMLElement>("#status-filter");
 export const inspectionFilter = query<HTMLElement>("#inspection-filter");
+export const statusModeToggle = query<HTMLButtonElement>("#status-mode-toggle");
+export const statusFilterLabel = query<HTMLElement>("#status-filter-label");
 export const clearFiltersButton = query<HTMLButtonElement>("#clear-filters");
 export const controlToolbar = query<HTMLElement>(".control-toolbar");
 export const results = query<HTMLElement>("#results");

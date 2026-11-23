@@ -81,7 +81,12 @@
                             </label>
                         </fieldset>
                         <fieldset id="status-filter" class="checkbox-filter">
-                            <legend>Student Status</legend>
+                            <legend>
+                                <button id="status-mode-toggle" class="status-mode-toggle" type="button" aria-label="Switch to student status filter" title="Switch to student status filter" aria-pressed="true">
+                                    <span class="material-symbols-outlined" aria-hidden="true">groups</span>
+                                </button>
+                                <span id="status-filter-label">Team Status</span>
+                            </legend>
                             <label class="status-filter-option unprocessed">
                                 <input type="checkbox" value="unprocessed" aria-label="Unprocessed" title="Unprocessed" />
                                 <span class="material-symbols-outlined" aria-hidden="true">question_mark</span>

@@ -351,7 +351,17 @@ export function render(): void {
             && matchesInspection;
     });
     const matchingTeams = new Set(searchFiltered
-        .filter((record) => !selectedStatuses.length || selectedStatuses.includes(core.getAttendanceStatus(record)))
+        .filter((record) => {
+            if (!selectedStatuses.length) return true;
+            if (core.state.statusFilterMode === "team") {
+                const teamRecords = searchFiltered.filter((item) =>
+                    item.teamCode === record.teamCode && (!selectedDivisions.length || selectedDivisions.includes(item.division))
+                );
+                const teamFlags = getTeamStatusFlags(teamRecords);
+                return selectedStatuses.some((status) => teamFlags.has(status));
+            }
+            return selectedStatuses.includes(core.getAttendanceStatus(record));
+        })
         .map((record) => record.teamCode));
     const filtered = selectedStatuses.length
         ? core.state.records.filter((record) => matchingTeams.has(record.teamCode)

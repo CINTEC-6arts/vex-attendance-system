@@ -199,16 +199,54 @@ select {
     background: #101a2d;
 }
 
+#status-filter {
+    position: relative;
+}
+
 .checkbox-filter legend {
+    display: inline-flex;
+    text-align: center;
+    align-items: center;
     flex: 0 0 auto;
     width: auto;
-    margin: 0 2px 0 0;
+    /* margin: 0 2px; */
     color: var(--muted);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: .04em;
     line-height: 1.2;
     text-transform: uppercase;
+}
+
+#status-filter legend {
+    margin-left: 5px;
+}
+
+.status-mode-toggle {
+    position: absolute;
+    left: 1px;
+    top: -5px;
+    width: 20px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    /* color: var(--muted); */
+    color: var(--accent);
+    cursor: pointer;
+
+    &:hover {
+        outline: 1px solid var(--line);
+        background: #1b2944;
+    }
+}
+
+.status-mode-toggle .material-symbols-outlined {
+    font-size: 16px;
 }
 
 .checkbox-filter label {

@@ -761,6 +761,16 @@ core.statusFilter.addEventListener("change", () => {
         .map((input) => input.value as core.AttendanceStatus);
     core.renderPreservingScrollCallback();
 });
+core.statusModeToggle.addEventListener("click", () => {
+    core.state.statusFilterMode = core.state.statusFilterMode === "student" ? "team" : "student";
+    const teamMode = core.state.statusFilterMode === "team";
+    core.statusModeToggle.setAttribute("aria-pressed", String(teamMode));
+    core.statusModeToggle.setAttribute("aria-label", teamMode ? "Switch to student status filter" : "Switch to team status filter");
+    core.statusModeToggle.title = teamMode ? "Switch to student status filter" : "Switch to team status filter";
+    core.statusFilterLabel.textContent = teamMode ? "Team Status" : "Student Status";
+    core.child<HTMLElement>(core.statusModeToggle, ".material-symbols-outlined").textContent = teamMode ? "groups" : "person";
+    core.renderPreservingScrollCallback();
+});
 core.inspectionFilter.addEventListener("change", () => {
     core.state.inspectionFilters = [...core.inspectionFilter.querySelectorAll<HTMLInputElement>("input:checked")]
         .map((input) => input.value as core.InspectionStatus);
