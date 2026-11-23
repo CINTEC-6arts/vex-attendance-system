@@ -10,7 +10,11 @@ let liveScanRunner: (() => void) | null = null;
 let lastScannedPayload = "";
 let lastScannedAt = 0;
 let lockedSyncOrientation: OrientationLockType | null = null;
-let liveRole: "host" | "client" | null = null;
+enum LiveSyncRole {
+    HOST = "host",
+    CLIENT = "client",
+}
+let liveRole: LiveSyncRole | null = null;
 let liveInitialSnapshotPending = false;
 let guestAwaitingConflictResolution = false;
 let liveKeepAliveTimer: number | null = null;
@@ -257,7 +261,7 @@ function setLiveSyncIndicator(active: boolean, detail: string, deviceCount: numb
 }
 
 function broadcastLiveDeviceCount(): void {
-    if (liveRole !== "host") return;
+    if (liveRole !== LiveSyncRole.HOST) return;
     if (!hostChannels.size) {
         setLiveSyncIndicator(false, "Live sync inactive");
         return;
@@ -272,7 +276,7 @@ function broadcastLiveDeviceCount(): void {
 function startLiveKeepAlive(): void {
     if (liveKeepAliveTimer !== null) window.clearInterval(liveKeepAliveTimer);
     liveKeepAliveTimer = window.setInterval(() => {
-        if (liveRole === "host") {
+        if (liveRole === LiveSyncRole.HOST) {
             hostChannels.forEach((channel) => {
                 if (channel.readyState === "open") channel.send(liveKeepAlivePrefix + "ping");
             });
@@ -305,9 +309,9 @@ async function waitForIceGathering(peer: RTCPeerConnection): Promise<void> {
 function getLivePeerRole(peer: RTCPeerConnection): void {
     peer.addEventListener("connectionstatechange", () => {
         if (peer.connectionState === "connected") {
-            const message = liveRole === "host" ? "Live host connected" : "Connected to live host";
+            const message = liveRole === LiveSyncRole.HOST ? "Live host connected" : "Connected to live host";
             setLiveSyncStatus(message, true);
-            setLiveSyncIndicator(true, message, liveRole === "host" ? hostChannels.size + 1 : 1);
+            setLiveSyncIndicator(true, message, liveRole === LiveSyncRole.HOST ? hostChannels.size + 1 : 1);
             showLiveSyncSuccess(message);
             startLiveKeepAlive();
         } else if (peer.connectionState === "disconnected" || peer.connectionState === "failed") {
@@ -322,7 +326,7 @@ async function broadcastLiveSnapshot(): Promise<void> {
     if (core.syncRuntime.liveApplyingSnapshot) return;
     const snapshot = await createSyncPayload();
     const message = liveSnapshotPrefix + snapshot;
-    if (liveRole === "host") {
+    if (liveRole === LiveSyncRole.HOST) {
         hostChannels.forEach((channel) => {
             if (channel.readyState === "open") channel.send(message);
         });
@@ -335,7 +339,7 @@ async function receiveLiveSnapshot(raw: string): Promise<void> {
     core.syncRuntime.liveApplyingSnapshot = true;
     try {
         if (liveInitialSnapshotPending) {
-            if (liveRole === "host") {
+            if (liveRole === LiveSyncRole.HOST) {
                 await applySyncPayload(raw, true);
             } else {
                 await applyLiveSnapshot(raw, true, true);
@@ -347,7 +351,7 @@ async function receiveLiveSnapshot(raw: string): Promise<void> {
         core.syncRuntime.liveApplyingSnapshot = false;
         liveInitialSnapshotPending = false;
     }
-    if (liveRole === "host") await broadcastLiveSnapshot();
+    if (liveRole === LiveSyncRole.HOST) await broadcastLiveSnapshot();
 }
 
 function configureHostChannel(session: string, channel: RTCDataChannel): void {
@@ -382,7 +386,7 @@ function configureHostChannel(session: string, channel: RTCDataChannel): void {
 
 async function createLiveHostOffer(): Promise<void> {
     if (!core.state.eventId || !core.state.records.length) throw new Error("Select an event before hosting live sync.");
-    liveRole = "host";
+    liveRole = LiveSyncRole.HOST;
     core.hostWebRTCButton.disabled = true;
     core.joinWebRTCButton.disabled = true;
     core.disconnectWebRTCButton.disabled = false;
@@ -441,7 +445,7 @@ async function joinLiveHostOffer(raw: string, compressed: boolean = false): Prom
     if (payload.h !== await core.getDatasetHash()) {
         throw new Error("The live-sync data.csv fingerprint does not match this device.");
     }
-    liveRole = "client";
+    liveRole = LiveSyncRole.CLIENT;
     core.hostWebRTCButton.disabled = true;
     core.joinWebRTCButton.disabled = true;
     core.disconnectWebRTCButton.disabled = false;
@@ -509,7 +513,7 @@ async function joinLiveHostOffer(raw: string, compressed: boolean = false): Prom
 }
 
 async function acceptLiveHostAnswer(raw: string, compressed: boolean = false): Promise<void> {
-    if (liveRole !== "host") throw new Error("This device is not hosting live sync.");
+    if (liveRole !== LiveSyncRole.HOST) throw new Error("This device is not hosting live sync.");
     const payload = (compressed
         ? await decompressLiveQrPayload(raw, true)
         : JSON.parse(raw)) as core.LiveAnswerPayload;
@@ -918,7 +922,7 @@ core.hostWebRTCButton.addEventListener("click", () => {
         });
 });
 core.joinWebRTCButton.addEventListener("click", () => {
-    liveRole = "client";
+    liveRole = LiveSyncRole.CLIENT;
     core.hostWebRTCButton.disabled = true;
     core.joinWebRTCButton.disabled = true;
     core.disconnectWebRTCButton.disabled = false;
@@ -1084,7 +1088,7 @@ core.applySyncReviewButton.addEventListener("click", async () => {
     core.syncReviewDialog.close();
     core.syncMessage.textContent = `Applied ${appliedCount} reviewed status${appliedCount === 1 ? "" : "es"}.`;
     await refreshSyncQr();
-    if (liveRole === "host") await broadcastLiveSnapshot();
+    if (liveRole === LiveSyncRole.HOST) await broadcastLiveSnapshot();
 });
 const chooseAllSyncSource = (source: "local" | "incoming"): void => {
     core.syncReviewList.querySelectorAll<HTMLButtonElement>(".sync-choice-button").forEach((button) => {
