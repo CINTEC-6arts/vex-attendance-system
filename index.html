@@ -295,8 +295,14 @@
                 <h2>Error</h2>
                 <p id="error-dialog-message"></p>
                 <div id="error-dialog-actions" class="error-dialog-actions" hidden>
-                    <button id="retry-error" class="action-button primary" type="button">Retry</button>
-                    <button id="cancel-error" class="action-button secondary" type="button">Cancel</button>
+                    <button id="retry-error" class="action-button danger error-dialog-action" type="button">
+                        <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                        <span>Retry</span>
+                    </button>
+                    <button id="cancel-error" class="action-button secondary error-dialog-action" type="button">
+                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                        <span>Cancel</span>
+                    </button>
                 </div>
             </div>
         </dialog>

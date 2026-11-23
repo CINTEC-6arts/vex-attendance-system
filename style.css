@@ -788,6 +788,49 @@ select:focus {
     margin-top: 20px;
 }
 
+.error-dialog-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: auto;
+    min-width: 104px;
+    min-height: 42px;
+    padding: 9px 14px;
+    font-weight: 800;
+    line-height: 1;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.error-dialog-action.secondary {
+    border: 1px solid var(--line-bright);
+    background: var(--surface-control);
+    color: var(--ink);
+}
+
+.error-dialog-action.secondary:hover,
+.error-dialog-action.secondary:focus-visible {
+    border-color: var(--accent);
+    background: var(--surface-hover);
+    color: var(--accent-bright);
+}
+
+.error-dialog-action.danger:hover,
+.error-dialog-action.danger:focus-visible {
+    background: var(--danger);
+    color: var(--white);
+    outline: 2px solid var(--danger-light);
+    outline-offset: 2px;
+}
+
+.error-dialog-action:active {
+    transform: translateY(1px);
+}
+
+.error-dialog-action .material-symbols-outlined {
+    font-size: 19px;
+}
+
 .sync-success-dialog {
     width: min(420px, calc(100vw - 32px));
     padding: 0;
