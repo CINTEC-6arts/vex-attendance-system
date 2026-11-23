@@ -9,7 +9,7 @@
         ],
         "allowJs": false,
         "noEmit": true,
-        "strict": false,
+        "strict": true,
         "skipLibCheck": true,
         "types": [
             "bun",

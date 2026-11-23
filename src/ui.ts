@@ -136,7 +136,7 @@ core.toggleTeamsButton.addEventListener("click", () => {
         });
     };
     const start = performance.now();
-    const maintainAnchor = (now) => {
+    const maintainAnchor = (now: number) => {
         keepAnchor();
         if (now - start < core.teamAnimationDuration) {
             requestAnimationFrame(maintainAnchor);
@@ -180,7 +180,9 @@ core.results.addEventListener("click", (event) => {
 
     const button = (event.target as Element).closest<HTMLButtonElement>("[data-status]");
     if (button) {
-        const [team, division, name] = button.dataset.attendance.split(":");
+        const attendance = button.dataset.attendance;
+        if (!attendance) return;
+        const [team, division, name] = attendance.split(":");
         const record = core.state.records.find((item) => item.teamCode === team && item.division === division && item.name === name);
         if (!record) return;
         if (!button.dataset.status || !core.isAttendanceStatus(button.dataset.status)) return;

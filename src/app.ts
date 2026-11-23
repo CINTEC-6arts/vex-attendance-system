@@ -82,11 +82,11 @@ window.addEventListener("resize", scheduleLayoutRecalculation, { passive: true }
 
 
 
-function display(value) {
+function display(value: string) {
     return value || "-";
 }
 
-function highlightText(element, value, query) {
+function highlightText(element: HTMLElement, value: string, query: string) {
     element.replaceChildren();
     const text = display(value);
     if (!query) {
@@ -584,7 +584,7 @@ export function render(): void {
                     person.dataset.teamCode = record.teamCode;
                     person.dataset.division = record.division;
                     person.dataset.personName = record.name;
-                    highlightText(person.querySelector(".person-name"), record.name, query);
+                    highlightText(person.querySelector(".person-name")!, record.name, query);
                     core.child<HTMLElement>(person, ".person-meta").textContent = `${display(record.school)} · ${display(record.dob)}`;
                     core.child<HTMLElement>(person, ".status-placeholder").replaceWith(createStatusButtons(record, currentStatus));
                     membersContent.append(person);

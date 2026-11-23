@@ -149,7 +149,8 @@ function decodePackedStatuses(value: string): Array<[number, core.AttendanceStat
     const statuses: Array<[number, core.AttendanceStatus]> = [];
     core.state.records.forEach((_, index) => {
         const statusCode = binary.charCodeAt(Math.floor(index / 4)) >> ((index % 4) * 2) & 3;
-        if (statusCode !== core.statusCodes[core.AttendanceStatus.UNPROCESSED]) statuses.push([index, core.statusCodes[statusCode]]);
+        const status = core.codeStatuses[statusCode];
+        if (status !== core.AttendanceStatus.UNPROCESSED) statuses.push([index, status]);
     });
     return statuses;
 }
