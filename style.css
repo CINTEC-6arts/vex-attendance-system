@@ -805,11 +805,14 @@ select:focus {
 
 .error-dialog-action.secondary {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: auto;
     min-width: 104px;
     height: 42px;
     padding: 9px 14px;
     place-items: initial;
+    text-align: center;
     border: 1px solid var(--line-bright);
     background: var(--surface-control);
     color: var(--ink);
