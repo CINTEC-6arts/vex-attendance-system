@@ -153,12 +153,12 @@ function parseCSV(text: string): core.RecordEntry[] {
         const record = Object.fromEntries(headers.map((header, index) => [header, cells[index] || ""])) as Record<string, string>;
         if (!record.team_code || !record.name) throw new Error(`CSV row ${rowIndex + 2} is missing a team or name.`);
         const division = record.division.toUpperCase();
-        if (division !== core.Division.ES && division !== core.Division.MS) {
+        if (!(Object.values(core.Division) as string[]).includes(division)) {
             throw new Error(`CSV row ${rowIndex + 2} has an invalid division. Expected ES or MS.`);
         }
         return {
             teamCode: record.team_code,
-            division,
+            division: division as core.Division,
             organisation: record.organisation,
             name: record.name,
             dob: record.dob,
@@ -198,13 +198,13 @@ async function loadRecords() {
 }
 
 function getTeamGradient(records: core.RecordEntry[], width: number | null = null): string {
-    const colors = {
-        unprocessed: "#26334e",
-        present: "#145c3d",
-        absent: "#702b32",
-        flagged: "#73500d",
+    const colors: Record<core.AttendanceStatus, string> = {
+        [core.AttendanceStatus.UNPROCESSED]: "#26334e",
+        [core.AttendanceStatus.PRESENT]: "#145c3d",
+        [core.AttendanceStatus.ABSENT]: "#702b32",
+        [core.AttendanceStatus.FLAGGED]: "#73500d",
     };
-    const statuses = ["present", "absent", "flagged", "unprocessed"];
+    const statuses = Object.values(core.AttendanceStatus);
     const total = records.length;
     let position = 0;
     const stops: string[] = [];
@@ -233,12 +233,10 @@ function updateAbsoluteTeamGradients(): void {
 
 function createStatusButtons(record: core.RecordEntry, currentStatus: core.AttendanceStatus): HTMLElement {
     const controls = core.statusButtonTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
-    const labels = {
-        unprocessed: "Unprocessed",
-        present: "Present",
-        absent: "Absent",
-        flagged: "Flagged",
-    };
+    const labels: Record<core.AttendanceStatus, string> = Object.values(core.AttendanceStatus).reduce((acc, status) => {
+        acc[status] = status.charAt(0).toUpperCase() + status.slice(1);
+        return acc;
+    }, {} as Record<core.AttendanceStatus, string>);
     controls.querySelectorAll<HTMLButtonElement>("[data-status]").forEach((button) => {
         const value = button.dataset.status as core.AttendanceStatus;
         button.classList.toggle("selected", currentStatus === value);
@@ -346,7 +344,9 @@ export function render(): void {
         const matchesQuery = !query || [record.teamCode, record.division, record.organisation, record.name]
             .some((value) => value.toLowerCase().includes(query));
         const matchesInspection = !selectedInspectionFilters.length
-            || selectedInspectionFilters.includes(core.isTeamInspected(record.teamCode, record.division) ? "inspected" : "not-inspected");
+            || selectedInspectionFilters.includes(core.isTeamInspected(record.teamCode, record.division)
+                ? core.InspectionStatus.INSPECTED
+                : core.InspectionStatus.NOT_INSPECTED);
         return matchesQuery
             && (!core.state.teamCode || record.teamCode === core.state.teamCode)
             && (!selectedDivisions.length || selectedDivisions.includes(record.division))
@@ -372,6 +372,9 @@ export function render(): void {
         teams.set(record.teamCode, team);
         return teams;
     }, new Map());
+    // A team with all members unprocessed is counted as unprocessed.
+    const unprocessedTeamCount = document.createElement("strong");
+    unprocessedTeamCount.textContent = String([...teamStatuses.values()].filter((statuses) => statuses.has("unprocessed") && !statuses.has("present") && !statuses.has("absent") && !statuses.has("flagged")).length);
     // A team with at least one present member is counted as present.
     const presentTeamCount = document.createElement("strong");
     presentTeamCount.textContent = String([...teamStatuses.values()].filter((statuses) => statuses.has("present")).length);
@@ -400,12 +403,14 @@ export function render(): void {
         tally.append(count, statusIcon);
         core.resultCount.append(tally);
     };
-    core.resultCount.append(takenAttendanceTeamCount, " / ", totalTeamCount, " taken attendance · ");
-    appendStatusTally(presentTeamCount, core.AttendanceStatus.PRESENT, "present", "check");
+    core.resultCount.append(totalTeamCount, " total · ");
+    appendStatusTally(unprocessedTeamCount, core.AttendanceStatus.UNPROCESSED, core.AttendanceStatus.UNPROCESSED, "question_mark");
     core.resultCount.append(" · ");
-    appendStatusTally(absentTeamCount, core.AttendanceStatus.ABSENT, "absent", "close");
+    appendStatusTally(presentTeamCount, core.AttendanceStatus.PRESENT, core.AttendanceStatus.PRESENT, "check");
     core.resultCount.append(" · ");
-    appendStatusTally(flaggedTeamCount, core.AttendanceStatus.FLAGGED, "flagged", "flag");
+    appendStatusTally(absentTeamCount, core.AttendanceStatus.ABSENT, core.AttendanceStatus.ABSENT, "close");
+    core.resultCount.append(" · ");
+    appendStatusTally(flaggedTeamCount, core.AttendanceStatus.FLAGGED, core.AttendanceStatus.FLAGGED, "flag");
     core.resultCount.append(" · ");
     const inspectionTally = document.createElement("span");
     inspectionTally.className = "attendance-tally inspected";
@@ -420,10 +425,10 @@ export function render(): void {
     updateClearFiltersButton();
     const isFiltered = Boolean(query)
         || Boolean(core.state.teamCode)
-        || selectedDivisions.length > 0
-        || selectedStatuses.length > 0
-        || selectedInspectionFilters.length > 0;
-    core.statusElement.textContent = `${filteredTeams.size} shown${isFiltered ? " · filtered" : ""}`;
+        || (selectedDivisions.length != 0 && selectedDivisions.length != Object.values(core.Division).length)
+        || (selectedStatuses.length != 0 && selectedStatuses.length != Object.values(core.AttendanceStatus).length)
+        || (selectedInspectionFilters.length != 0 && selectedInspectionFilters.length != Object.values(core.InspectionStatus).length);
+    core.statusElement.textContent = `${filteredTeams.size} / ${totalTeamCount.textContent} shown${isFiltered ? " · filtered" : ""}`;
     core.results.replaceChildren();
 
     if (!filteredTeams.size) {

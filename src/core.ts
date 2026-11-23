@@ -21,6 +21,10 @@ export enum AttendanceStatus {
     ABSENT = "absent",
     FLAGGED = "flagged"
 }
+export enum InspectionStatus {
+    INSPECTED = "inspected",
+    NOT_INSPECTED = "not-inspected"
+}
 export enum Division {
     ES = "ES",
     MS = "MS"
@@ -94,9 +98,10 @@ export const state = {
     query: "",
     teamCode: "",
     statusFilters: [] as AttendanceStatus[],
-    inspectionFilters: [] as ("inspected" | "not-inspected")[],
+    divisionFilters: [] as Division[],
+    inspectionFilters: [] as InspectionStatus[],
     attendance: JSON.parse(localStorage.getItem("attendance-status") || "{}") as Record<string, AttendanceStatus>,
-    inspection: JSON.parse(localStorage.getItem("inspection-status") || "{}") as Record<string, boolean>,
+    inspection: JSON.parse(localStorage.getItem("inspection-status") || "{}") as Record<string, InspectionStatus | boolean>,
 };
 export const searchInput = query<HTMLInputElement>("#search");
 export const clearButton = query<HTMLButtonElement>("#clear");
@@ -235,7 +240,8 @@ export function inspectionKey(teamCode: string, division: Division): string {
     return `${state.eventId}:${teamCode}:${division}`;
 }
 export function isTeamInspected(teamCode: string, division: Division): boolean {
-    return state.inspection[inspectionKey(teamCode, division)] === true;
+    const status = state.inspection[inspectionKey(teamCode, division)];
+    return status === true || status === InspectionStatus.INSPECTED;
 }
 export function saveInspection(): void {
     localStorage.setItem("inspection-status", JSON.stringify(state.inspection));

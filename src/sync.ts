@@ -759,7 +759,7 @@ core.statusFilter.addEventListener("change", () => {
 });
 core.inspectionFilter.addEventListener("change", () => {
     core.state.inspectionFilters = [...core.inspectionFilter.querySelectorAll<HTMLInputElement>("input:checked")]
-        .map((input) => input.value as "inspected" | "not-inspected");
+        .map((input) => input.value as core.InspectionStatus);
     core.renderPreservingScrollCallback();
 });
 core.divisionFilter.addEventListener("change", () => {
@@ -855,7 +855,9 @@ core.results.addEventListener("click", (event) => {
         const division = inspectionButton.dataset.division;
         if (!team || (division !== core.Division.ES && division !== core.Division.MS)) return;
         const key = core.inspectionKey(team, division);
-        core.state.inspection[key] = !core.state.inspection[key];
+        core.state.inspection[key] = core.state.inspection[key] === core.InspectionStatus.INSPECTED
+            ? core.InspectionStatus.NOT_INSPECTED
+            : core.InspectionStatus.INSPECTED;
         core.saveInspection();
         core.renderPreservingScrollCallback();
         return;
