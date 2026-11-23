@@ -457,8 +457,8 @@ select:focus {
 }
 
 #sync-attendance {
-    border-color: var(--accent);
-    background: var(--accent);
+    border-color: #4f6ed1;
+    background: #4f6ed1;
     color: #fff;
 }
 
