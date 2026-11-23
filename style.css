@@ -262,7 +262,7 @@ select {
 }
 
 .inspection-filter-option.not-inspected .material-symbols-outlined {
-    color: var(--muted);
+    color: #b084ff;
 }
 
 .checkbox-filter input {
