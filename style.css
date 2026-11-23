@@ -456,6 +456,12 @@ select:focus {
     cursor: pointer;
 }
 
+#sync-attendance {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
 .material-symbols-outlined {
     font-size: 20px;
     line-height: 1;
