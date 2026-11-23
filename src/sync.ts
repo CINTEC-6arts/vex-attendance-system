@@ -1,6 +1,7 @@
 import * as QRCode from "qrcode";
 import jsQR from "jsqr";
 import * as core from "./core";
+import * as app from "./app";
 
 let syncStream: MediaStream | null = null;
 let scanLoopActive = false;
@@ -889,8 +890,28 @@ core.closeLiveSyncSuccessButton.addEventListener("click", () => core.liveSyncSuc
 core.liveSyncSuccessDialog.addEventListener("cancel", () => core.liveSyncSuccessDialog.close());
 core.liveConflictPendingDialog.addEventListener("cancel", (event) => event.preventDefault());
 core.closeSyncReviewButton.addEventListener("click", () => core.syncReviewDialog.close());
-core.closeErrorButton.addEventListener("click", () => core.errorDialog.close());
-core.errorDialog.addEventListener("cancel", () => core.errorDialog.close());
+core.closeErrorButton.addEventListener("click", () => {
+    if (!core.errorDialogActions.hidden) {
+        void app.cancelCurrentEventPassword();
+    } else {
+        core.errorDialog.close();
+    }
+});
+core.retryErrorButton.addEventListener("click", () => {
+    core.errorDialog.close();
+    void app.retryCurrentEventPassword();
+});
+core.cancelErrorButton.addEventListener("click", () => {
+    void app.cancelCurrentEventPassword();
+});
+core.errorDialog.addEventListener("cancel", (event) => {
+    if (!core.errorDialogActions.hidden) {
+        event.preventDefault();
+        void app.cancelCurrentEventPassword();
+    } else {
+        core.errorDialog.close();
+    }
+});
 core.applySyncReviewButton.addEventListener("click", async () => {
     let appliedCount = 0;
     core.syncReviewList.querySelectorAll<HTMLButtonElement>(".sync-choice-button[aria-pressed='true']").forEach((button) => {

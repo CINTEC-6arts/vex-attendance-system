@@ -781,6 +781,13 @@ select:focus {
     line-height: 1.5;
 }
 
+.error-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
 .sync-success-dialog {
     width: min(420px, calc(100vw - 32px));
     padding: 0;

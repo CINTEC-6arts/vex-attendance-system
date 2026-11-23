@@ -123,6 +123,9 @@ export const loadingProgress = query<HTMLProgressElement>("#loading-progress");
 export const error = query<HTMLElement>("#error");
 export const errorDialog = query<HTMLDialogElement>("#error-dialog");
 export const errorDialogMessage = query<HTMLElement>("#error-dialog-message");
+export const errorDialogActions = query<HTMLElement>("#error-dialog-actions");
+export const retryErrorButton = query<HTMLButtonElement>("#retry-error");
+export const cancelErrorButton = query<HTMLButtonElement>("#cancel-error");
 export const closeErrorButton = query<HTMLButtonElement>("#close-error");
 export const resetButton = query<HTMLButtonElement>("#reset-attendance");
 export const syncAttendanceButton = query<HTMLButtonElement>("#sync-attendance");
@@ -227,6 +230,12 @@ export const setBroadcastLiveSnapshotCallback = (callback: () => Promise<void>):
 };
 export function showErrorPopup(message: string): void {
     errorDialogMessage.textContent = message;
+    errorDialogActions.hidden = true;
+    if (!errorDialog.open) errorDialog.showModal();
+}
+export function showPasswordErrorPopup(message: string): void {
+    errorDialogMessage.textContent = message;
+    errorDialogActions.hidden = false;
     if (!errorDialog.open) errorDialog.showModal();
 }
 export async function getDatasetHash(): Promise<string> {

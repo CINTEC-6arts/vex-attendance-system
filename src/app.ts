@@ -1,4 +1,14 @@
 import * as core from "./core";
+import {
+    loadPackedEvent,
+    PasswordCancelledError,
+    WrongPasswordError,
+    type PackedEventFiles,
+} from "./packedData";
+import type { PackedEventData } from "../lib/types";
+
+const packedEvents = new Map<string, PackedEventData>();
+const packedEventFiles = new Map<string, PackedEventFiles>();
 
 async function fetchWithRetry(url: string): Promise<Response> {
     let lastError: unknown;
@@ -19,8 +29,8 @@ async function fetchWithRetry(url: string): Promise<Response> {
 
 function getAssetPaths(eventId: string) {
     return {
-        data: `assets/${eventId}/data.csv`,
-        images: `assets/${eventId}/images/`,
+        data: `packed/${eventId}/data.csv`,
+        images: `packed/${eventId}/images/`,
     };
 }
 
@@ -173,16 +183,30 @@ async function loadRecords() {
     core.loadingProgress.hidden = false;
     core.loadingProgress.value = 0;
     core.loadingProgress.max = 1;
-    const response = await fetchWithRetry(assetPaths.data);
-    const records = parseCSV(await response.text());
+    const event = packedEvents.get(core.state.eventId);
+    if (!event) throw new Error(`Packed event ${core.state.eventId} was not found.`);
+    let files = packedEventFiles.get(core.state.eventId);
+    if (!files) {
+        files = await loadPackedEvent(event, fetchWithRetry, (packedEvent) =>
+            packedEvent.isEncrypted
+                ? window.prompt(`Enter the password for ${packedEvent.eventName}:`)
+                : ""
+        );
+        packedEventFiles.set(core.state.eventId, files);
+    }
+    const csv = files.get("data.csv");
+    if (!csv) throw new Error(`Archive for ${event.eventName} does not contain data.csv.`);
+    const records = parseCSV(await csv.text());
     const imageUrls = [...new Set(records.map((record) => `${assetPaths.images}${encodeURIComponent(record.image)}`))];
     const failedImages: string[] = [];
     core.loadingProgress.value = 1;
     core.loadingProgress.max = imageUrls.length + 1;
     await Promise.all(imageUrls.map(async (url) => {
         try {
-            const imageResponse = await fetchWithRetry(url);
-            core.preloadedImages.set(url, URL.createObjectURL(await imageResponse.blob()));
+            const fileName = `images/${decodeURIComponent(url.slice(assetPaths.images.length))}`;
+            const image = files.get(fileName);
+            if (!image) throw new Error(`Missing archive image: ${fileName}`);
+            core.preloadedImages.set(url, URL.createObjectURL(image));
         } catch {
             failedImages.push(url);
         } finally {
@@ -635,15 +659,17 @@ function populateEvents() {
 }
 
 async function loadEvents() {
-    const response = await fetchWithRetry(core.eventListPath);
-    const eventIds = (await response.text())
-        .split(/\r?\n/)
-        .map((eventId) => eventId.trim())
-        .filter(Boolean);
-    if (!eventIds.length) throw new Error("No event folders were detected during the build.");
-    core.setEvents(eventIds.map((id) => ({
-        id,
-        label: id.replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    const response = await fetchWithRetry("data/dataList.json");
+    const packedEventData = await response.json() as PackedEventData[];
+    if (!Array.isArray(packedEventData) || !packedEventData.length) {
+        throw new Error("No packed events were found.");
+    }
+    packedEvents.clear();
+    packedEventFiles.clear();
+    packedEventData.forEach((event) => packedEvents.set(event.dirName, event));
+    core.setEvents(packedEventData.map((event) => ({
+        id: event.dirName,
+        label: event.eventName,
     })));
 
     core.state.eventId = "";
@@ -674,6 +700,7 @@ export async function switchEvent(eventId: string) {
     if (!eventId) {
         core.state.records = [];
         populateTeams();
+        populateEvents();
         core.eventFilter.value = "";
         core.statusElement.textContent = "Select an event to load records";
         render();
@@ -687,9 +714,27 @@ export async function switchEvent(eventId: string) {
         render();
     } catch (loadError) {
         core.loadingProgress.hidden = true;
-        core.showErrorPopup(`Unable to load event records: ${loadError instanceof Error ? loadError.message : String(loadError)}`);
+        if (loadError instanceof PasswordCancelledError) {
+            await switchEvent("");
+        } else if (loadError instanceof WrongPasswordError) {
+            core.showPasswordErrorPopup(loadError.message);
+        } else {
+            core.showErrorPopup(`Unable to load event records: ${loadError instanceof Error ? loadError.message : String(loadError)}`);
+        }
         core.statusElement.textContent = "Unable to load event records";
     }
+}
+
+export async function retryCurrentEventPassword(): Promise<void> {
+    const eventId = core.state.eventId;
+    if (!eventId) return;
+    packedEventFiles.delete(eventId);
+    await switchEvent(eventId);
+}
+
+export async function cancelCurrentEventPassword(): Promise<void> {
+    core.errorDialog.close();
+    await switchEvent("");
 }
 
 core.setRenderPreservingScrollCallback(renderPreservingScroll);

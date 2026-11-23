@@ -21,7 +21,9 @@
         "typescript": "latest"
     },
     "dependencies": {
+        "fflate": "^0.8.3",
         "jsqr": "^1.4.0",
-        "qrcode": "^1.5.4"
+        "qrcode": "^1.5.4",
+        "scrypt-js": "^3.0.1"
     }
 }
