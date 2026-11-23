@@ -327,6 +327,7 @@ select {
     font-size: 13px;
     line-height: 1;
     white-space: nowrap;
+    cursor: pointer;
 }
 
 .checkbox-filter label:hover,
