@@ -795,10 +795,10 @@ select:focus {
     gap: 7px;
     width: 112px;
     min-width: 104px;
-    min-height: 42px;
-    padding: 9px 14px;
+    height: 42px;
+    padding: 0 14px;
     font-weight: 800;
-    line-height: 1;
+    line-height: 42px;
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
 }
 
@@ -809,7 +809,7 @@ select:focus {
     width: auto;
     min-width: 104px;
     height: 42px;
-    padding: 9px 14px;
+    padding: 0 14px;
     place-items: initial;
     text-align: center;
     border: 1px solid var(--line-bright);
