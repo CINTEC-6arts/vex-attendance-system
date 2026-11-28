@@ -1,3 +1,4 @@
 [submodule "vex-attendance-system-data"]
 	path = vex-attendance-system-data
 	url = https://github.com/CINTEC-6arts/vex-attendance-system-data.git
+	branch = main

@@ -20,6 +20,8 @@ jobs:
         steps:
             - name: Check out repository
               uses: actions/checkout@v4
+            - name: Update data submodule to latest main
+              run: git submodule update --init --remote vex-attendance-system-data
             - name: Set up Bun
               uses: oven-sh/setup-bun@v2
               with:
