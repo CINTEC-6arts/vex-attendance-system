@@ -9,25 +9,45 @@ import type { PackedEventData } from "../lib/types";
 
 const packedEvents = new Map<string, PackedEventData>();
 const packedEventFiles = new Map<string, PackedEventFiles>();
+let isCheckingPassword = false;
+
+core.passwordDialog.addEventListener("cancel", (cancelEvent) => {
+    if (isCheckingPassword) cancelEvent.preventDefault();
+});
 
 function requestEventPassword(event: PackedEventData): Promise<string | null> {
     return new Promise((resolve) => {
         let settled = false;
-        const finish = (password: string | null): void => {
-            if (settled) return;
-            settled = true;
-            core.passwordDialog.close();
+        const removeListeners = (): void => {
             core.passwordForm.removeEventListener("submit", onSubmit);
             core.cancelPasswordButton.removeEventListener("click", onCancel);
             core.cancelPasswordCloseButton.removeEventListener("click", onCancel);
             core.passwordDialog.removeEventListener("cancel", onDialogCancel);
+        };
+        const finish = (password: string | null): void => {
+            if (settled) return;
+            settled = true;
+            core.passwordDialog.close();
+            removeListeners();
             resolve(password);
         };
         const onSubmit = (submitEvent: SubmitEvent): void => {
             submitEvent.preventDefault();
+            if (settled) return;
             const password = core.passwordInput.value;
             core.passwordInput.value = "";
-            finish(password);
+            if (!password) return;
+            settled = true;
+            isCheckingPassword = true;
+            removeListeners();
+            core.passwordDialogMessage.textContent = "Checking password…";
+            core.passwordProgress.value = 0;
+            core.passwordProgress.hidden = false;
+            core.passwordInput.disabled = true;
+            core.cancelPasswordButton.disabled = true;
+            core.cancelPasswordCloseButton.disabled = true;
+            core.submitPasswordButton.disabled = true;
+            requestAnimationFrame(() => resolve(password));
         };
         const onCancel = (): void => {
             core.passwordInput.value = "";
@@ -40,6 +60,11 @@ function requestEventPassword(event: PackedEventData): Promise<string | null> {
 
         core.passwordDialogMessage.textContent = `Enter the password to open ${event.eventName}.`;
         core.passwordInput.value = "";
+        core.passwordProgress.hidden = true;
+        core.passwordInput.disabled = false;
+        core.cancelPasswordButton.disabled = false;
+        core.cancelPasswordCloseButton.disabled = false;
+        core.submitPasswordButton.disabled = false;
         core.passwordForm.addEventListener("submit", onSubmit);
         core.cancelPasswordButton.addEventListener("click", onCancel);
         core.cancelPasswordCloseButton.addEventListener("click", onCancel);
@@ -49,14 +74,15 @@ function requestEventPassword(event: PackedEventData): Promise<string | null> {
     });
 }
 
-async function fetchWithRetry(url: string): Promise<Response> {
+async function fetchWithRetry(url: string, signal?: AbortSignal): Promise<Response> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= core.maxFetchAttempts; attempt += 1) {
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, { signal });
             if (response.ok) return response;
             lastError = new Error(`${response.status} ${response.statusText}`);
         } catch (error) {
+            if (signal?.aborted) throw error;
             lastError = error;
         }
         if (attempt < core.maxFetchAttempts) {
@@ -221,25 +247,43 @@ async function loadRecords() {
     const assetPaths = getAssetPaths(core.state.eventId);
     core.loadingProgress.hidden = false;
     core.loadingProgress.value = 0;
-    core.loadingProgress.max = 1;
+    core.loadingProgress.max = 2;
     const event = packedEvents.get(core.state.eventId);
     if (!event) throw new Error(`Packed event ${core.state.eventId} was not found.`);
     let files = packedEventFiles.get(core.state.eventId);
     if (!files) {
-        files = await loadPackedEvent(event, fetchWithRetry, (packedEvent) =>
-            packedEvent.isEncrypted
-                ? requestEventPassword(packedEvent)
-                : ""
-        );
+        try {
+            files = await loadPackedEvent(
+                event,
+                fetchWithRetry,
+                (packedEvent) => packedEvent.isEncrypted ? requestEventPassword(packedEvent) : "",
+                (progress) => {
+                    core.passwordDialogMessage.textContent = `Checking password… ${Math.round(progress * 100)}%`;
+                    core.passwordProgress.value = progress;
+                },
+                (progress) => {
+                    core.loadingProgress.value = progress;
+                },
+            );
+        } finally {
+            isCheckingPassword = false;
+            if (core.passwordDialog.open) core.passwordDialog.close();
+            core.passwordInput.disabled = false;
+            core.cancelPasswordButton.disabled = false;
+            core.cancelPasswordCloseButton.disabled = false;
+            core.submitPasswordButton.disabled = false;
+            core.passwordProgress.hidden = true;
+        }
         packedEventFiles.set(core.state.eventId, files);
     }
+    core.loadingProgress.value = 1;
     const csv = files.get("data.csv");
     if (!csv) throw new Error(`Archive for ${event.eventName} does not contain data.csv.`);
     const records = parseCSV(await csv.text());
     const imageUrls = [...new Set(records.map((record) => `${assetPaths.images}${encodeURIComponent(record.image)}`))];
     const failedImages: string[] = [];
-    core.loadingProgress.value = 1;
-    core.loadingProgress.max = imageUrls.length + 1;
+    core.loadingProgress.value = 2;
+    core.loadingProgress.max = imageUrls.length + 2;
     await Promise.all(imageUrls.map(async (url) => {
         try {
             const fileName = `images/${decodeURIComponent(url.slice(assetPaths.images.length))}`;

@@ -34,29 +34,102 @@ async function sha256(bytes: Uint8Array): Promise<string> {
     return hex(new Uint8Array(digest));
 }
 
-async function decryptPackedFile(bytes: Uint8Array, password: string, eventName: string): Promise<Uint8Array<ArrayBuffer>> {
-    if (bytes.length < 52) throw new Error("Invalid encrypted archive.");
-    const magic = new TextDecoder().decode(bytes.slice(0, 8));
-    if (magic !== "VEXENC1\u0000") throw new Error("Invalid encrypted archive format.");
+function fromHex(value: string, expectedLength?: number): Uint8Array<ArrayBuffer> {
+    if (!/^(?:[0-9a-f]{2})+$/i.test(value)) throw new Error("Invalid password verifier encoding.");
+    const bytes = ownedBytes(value.match(/.{2}/g)!.map((byte) => parseInt(byte, 16)));
+    if (expectedLength !== undefined && bytes.length !== expectedLength) {
+        throw new Error("Invalid password verifier length.");
+    }
+    return bytes;
+}
 
-    const salt = ownedBytes(bytes.slice(8, 24));
+async function deriveKey(
+    password: string,
+    salt: Uint8Array<ArrayBuffer>,
+    onProgress?: (progress: number) => void,
+): Promise<Uint8Array<ArrayBuffer>> {
+    const passwordBytes = new TextEncoder().encode(password);
+    return ownedBytes(await scrypt(passwordBytes, salt, 16384, 8, 1, 32, onProgress));
+}
+
+async function verifyPassword(
+    event: PackedEventData,
+    password: string,
+    onProgress?: (progress: number) => void,
+): Promise<Uint8Array<ArrayBuffer>> {
+    const verifier = event.passwordVerifier;
+    if (!verifier) throw new Error(`Password verifier is missing for ${event.eventName}.`);
+    const salt = fromHex(verifier.salt, 16);
+    const iv = fromHex(verifier.iv, 12);
+    const encryptedPhrase = fromHex(verifier.ciphertext);
+    if (encryptedPhrase.length < 16) throw new Error("Invalid password verifier ciphertext.");
+    const keyBytes = await deriveKey(password, salt, onProgress);
+    const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
+    try {
+        const plaintext = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv, additionalData: new TextEncoder().encode(event.dirName) },
+            key,
+            encryptedPhrase,
+        );
+        if (new TextDecoder().decode(plaintext) !== `VEX-PASSWORD-CHECK:${event.dirName}`) {
+            throw new WrongPasswordError(event.eventName);
+        }
+    } catch {
+        throw new WrongPasswordError(event.eventName);
+    }
+    return keyBytes;
+}
+
+async function readArchive(
+    response: Response,
+    event: PackedEventData,
+    onProgress?: (progress: number) => void,
+): Promise<Uint8Array<ArrayBuffer>> {
+    if (!response.body) {
+        const bytes = ownedBytes(new Uint8Array(await response.arrayBuffer()));
+        onProgress?.(1);
+        return bytes;
+    }
+
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let received = 0;
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        received += value.byteLength;
+        chunks.push(value);
+        onProgress?.(Math.min(received / event.size, 1));
+    }
+    const bytes = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
+    return ownedBytes(bytes);
+}
+
+async function decryptPackedFile(
+    bytes: Uint8Array,
+    event: PackedEventData,
+    keyBytes: Uint8Array<ArrayBuffer>,
+): Promise<Uint8Array<ArrayBuffer>> {
+    if (bytes.length < 52) throw new Error("Invalid encrypted archive.");
+    if (new TextDecoder().decode(bytes.slice(0, 8)) !== "VEXENC1\u0000") {
+        throw new Error("Invalid encrypted archive format.");
+    }
+    if (!event.passwordVerifier || hex(bytes.slice(8, 24)) !== event.passwordVerifier.salt) {
+        throw new Error("Archive encryption salt does not match its password verifier.");
+    }
+
     const iv = ownedBytes(bytes.slice(24, 36));
     const authTag = ownedBytes(bytes.slice(-16));
     const ciphertext = ownedBytes(bytes.slice(36, -16));
-    const passwordBytes = new TextEncoder().encode(password);
-    const keyBytes = ownedBytes(await scrypt(passwordBytes, salt, 16384, 8, 1, 32));
     const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
     const combined = ownedBytes([...ciphertext, ...authTag]);
-    let plaintext: ArrayBuffer;
-    try {
-        plaintext = await crypto.subtle.decrypt(
-            { name: "AES-GCM", iv },
-            key,
-            combined,
-        );
-    } catch {
-        throw new WrongPasswordError(eventName);
-    }
+    const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, combined);
     return new Uint8Array(plaintext);
 }
 
@@ -89,11 +162,42 @@ function parseTar(tarBytes: Uint8Array): Map<string, Uint8Array> {
 
 export async function loadPackedEvent(
     event: PackedEventData,
-    fetchArchive: (url: string) => Promise<Response>,
+    fetchArchive: (url: string, signal?: AbortSignal) => Promise<Response>,
     getPassword?: (event: PackedEventData) => string | null | Promise<string | null>,
+    onPasswordCheckProgress?: (progress: number) => void,
+    onArchiveDownloadProgress?: (progress: number) => void,
 ): Promise<PackedEventFiles> {
-    const archiveResponse = await fetchArchive(`data/${encodeURIComponent(event.artifactPath)}`);
-    const archiveBytes = ownedBytes(new Uint8Array(await archiveResponse.arrayBuffer()));
+    let archiveBytes: Uint8Array<ArrayBuffer>;
+    let keyBytes: Uint8Array<ArrayBuffer> | undefined;
+    if (event.isEncrypted) {
+        const password = await getPassword?.(event);
+        if (password === null) throw new PasswordCancelledError();
+        if (!password) throw new WrongPasswordError(event.eventName);
+
+        const controller = new AbortController();
+        const archivePromise = fetchArchive(
+            `data/${encodeURIComponent(event.artifactPath)}`,
+            controller.signal,
+        ).then((response) => readArchive(response, event, onArchiveDownloadProgress));
+        const archiveOutcome = archivePromise.then(
+            (bytes) => ({ bytes }),
+            (error: unknown) => ({ error }),
+        );
+        try {
+            keyBytes = await verifyPassword(event, password, onPasswordCheckProgress);
+        } catch (error) {
+            controller.abort();
+            await archiveOutcome;
+            throw error;
+        }
+        const outcome = await archiveOutcome;
+        if ("error" in outcome) throw outcome.error;
+        archiveBytes = outcome.bytes;
+    } else {
+        const response = await fetchArchive(`data/${encodeURIComponent(event.artifactPath)}`);
+        archiveBytes = await readArchive(response, event, onArchiveDownloadProgress);
+    }
+
     if (archiveBytes.byteLength !== event.size) {
         throw new Error(`Archive size mismatch for ${event.eventName}.`);
     }
@@ -103,10 +207,8 @@ export async function loadPackedEvent(
 
     let tarBytes: Uint8Array<ArrayBuffer>;
     if (event.isEncrypted) {
-        const password = await getPassword?.(event);
-        if (password === null) throw new PasswordCancelledError();
-        if (!password) throw new WrongPasswordError(event.eventName);
-        tarBytes = await decryptPackedFile(archiveBytes, password, event.eventName);
+        if (!keyBytes) throw new Error(`Encryption key was not derived for ${event.eventName}.`);
+        tarBytes = await decryptPackedFile(archiveBytes, event, keyBytes);
     } else {
         tarBytes = archiveBytes;
     }

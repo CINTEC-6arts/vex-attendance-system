@@ -3,6 +3,11 @@ export type UnpackedEventData = {
     dirName: string;
     password: string | null;
 };
+export type PasswordVerifier = {
+    salt: string;
+    iv: string;
+    ciphertext: string;
+};
 export type PackedEventData = {
     eventName: string;
     dirName: string;
@@ -10,4 +15,5 @@ export type PackedEventData = {
     isEncrypted: boolean;
     SHA256: string;
     size: number;
+    passwordVerifier?: PasswordVerifier;
 };

@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { createTarGz } from "./zipHelper";
 import { computeSHA256, encryptFile } from "./cryptHelper";
-import { type UnpackedEventData, type PackedEventData } from "./types";
+import { type UnpackedEventData, type PackedEventData, type PasswordVerifier } from "./types";
 
 export async function pack(eventData: UnpackedEventData, UNPACKED_DIR: string, PACKED_DIR: string): Promise<PackedEventData> {
     const eventDirPath = path.join(UNPACKED_DIR, eventData.dirName);
@@ -13,9 +13,10 @@ export async function pack(eventData: UnpackedEventData, UNPACKED_DIR: string, P
     await createTarGz(eventDirPath, tarPath);
     // console.log(`Successfully created ${tarPath} (${fs.statSync(tarPath).size} bytes)`);
 
+    let passwordVerifier: PasswordVerifier | undefined;
     if (eventData.password) {
         const encryptedPath = `${tarPath}.enc`;
-        await encryptFile(tarPath, encryptedPath, eventData.password);
+        passwordVerifier = await encryptFile(tarPath, encryptedPath, eventData.password, eventData.dirName);
         // console.log(`Successfully encrypted ${tarPath} to ${encryptedPath} (${fs.statSync(encryptedPath).size} bytes)`);
 
         fs.unlinkSync(tarPath);
@@ -31,5 +32,6 @@ export async function pack(eventData: UnpackedEventData, UNPACKED_DIR: string, P
         isEncrypted: !!eventData.password,
         SHA256: sha256Hash,
         size: fs.statSync(eventData.password ? `${tarPath}.enc` : tarPath).size,
+        ...(passwordVerifier ? { passwordVerifier } : {}),
     };
 }

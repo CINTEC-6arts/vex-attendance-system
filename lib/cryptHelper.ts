@@ -4,6 +4,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, scrypt } fro
 import fs from 'fs';
 import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
+import type { PasswordVerifier } from './types';
 
 const KEY_LENGTH = 32;
 const IV_LENGTH = 12;
@@ -29,7 +30,8 @@ export async function encryptFile(
     inputFilePath: string,
     outputFilePath: string,
     password: string,
-): Promise<void> {
+    binding: string,
+): Promise<PasswordVerifier> {
     if (password.length === 0) {
         throw new Error('Encryption password must not be empty.');
     }
@@ -37,6 +39,14 @@ export async function encryptFile(
     const salt = randomBytes(SALT_LENGTH);
     const iv = randomBytes(IV_LENGTH);
     const key = await deriveKey(password, salt);
+    const verifierIv = randomBytes(IV_LENGTH);
+    const verifierCipher = createCipheriv('aes-256-gcm', key, verifierIv);
+    verifierCipher.setAAD(Buffer.from(binding, 'utf8'));
+    const verifierCiphertext = Buffer.concat([
+        verifierCipher.update(`VEX-PASSWORD-CHECK:${binding}`, 'utf8'),
+        verifierCipher.final(),
+        verifierCipher.getAuthTag(),
+    ]);
     const cipher = createCipheriv('aes-256-gcm', key, iv);
     const output = fs.createWriteStream(outputFilePath);
     const appendAuthTag = new Transform({
@@ -50,6 +60,11 @@ export async function encryptFile(
 
     output.write(Buffer.concat([FILE_MAGIC, salt, iv]));
     await pipeline(fs.createReadStream(inputFilePath), cipher, appendAuthTag, output);
+    return {
+        salt: salt.toString('hex'),
+        iv: verifierIv.toString('hex'),
+        ciphertext: verifierCiphertext.toString('hex'),
+    };
 }
 
 export async function decryptFile(
