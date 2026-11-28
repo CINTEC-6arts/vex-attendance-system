@@ -3,8 +3,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "bun run _prebuild && bun build index.html --outdir=dist --sourcemap=external --minify",
-        "watch": "bun run _prebuild && bun build index.html --outdir=dist --sourcemap=external --minify --watch",
+        "build": "bun run _prebuild && bun build index.html src/argon2Worker.ts --outdir=dist --sourcemap=external --minify",
+        "watch": "bun run _prebuild && bun build index.html src/argon2Worker.ts --outdir=dist --sourcemap=external --minify --watch",
         "_prebuild": "bun run _clean-dist && bun run _pack-data",
         "_clean-dist": "bun scripts/clean-dist.ts",
         "_pack-data": "bun scripts/pack-data.ts",
@@ -22,8 +22,8 @@
     },
     "dependencies": {
         "fflate": "^0.8.3",
+        "hash-wasm": "^4.12.0",
         "jsqr": "^1.4.0",
-        "qrcode": "^1.5.4",
-        "scrypt-js": "^3.0.1"
+        "qrcode": "^1.5.4"
     }
 }

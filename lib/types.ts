@@ -4,6 +4,10 @@ export type UnpackedEventData = {
     password: string | null;
 };
 export type PasswordVerifier = {
+    algorithm: "argon2d";
+    memoryKiB: number;
+    iterations: number;
+    parallelism: number;
     salt: string;
     iv: string;
     ciphertext: string;

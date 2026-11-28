@@ -1,5 +1,10 @@
 import { gunzipSync } from "fflate";
-import { scrypt } from "scrypt-js";
+import {
+    ARGON2_ALGORITHM,
+    ARGON2_ITERATIONS,
+    ARGON2_MEMORY_KIB,
+    ARGON2_PARALLELISM,
+} from "../lib/argon";
 import type { PackedEventData } from "../lib/types";
 
 export type PackedEventFiles = Map<string, Blob>;
@@ -43,27 +48,52 @@ function fromHex(value: string, expectedLength?: number): Uint8Array<ArrayBuffer
     return bytes;
 }
 
-async function deriveKey(
+async function deriveKeyInWorker(
     password: string,
     salt: Uint8Array<ArrayBuffer>,
-    onProgress?: (progress: number) => void,
 ): Promise<Uint8Array<ArrayBuffer>> {
-    const passwordBytes = new TextEncoder().encode(password);
-    return ownedBytes(await scrypt(passwordBytes, salt, 16384, 8, 1, 32, onProgress));
+    const workerFile = import.meta.url.endsWith(".ts") ? "./argon2Worker.ts" : "./src/argon2Worker.js";
+    const worker = new Worker(new URL(workerFile, import.meta.url), { type: "module" });
+    return new Promise((resolve, reject) => {
+        worker.addEventListener("message", (event: MessageEvent<{ key?: Uint8Array; error?: string }>) => {
+            worker.terminate();
+            if (event.data.error) {
+                reject(new Error(`Argon2d key derivation failed: ${event.data.error}`));
+                return;
+            }
+            if (!event.data.key) {
+                reject(new Error("Argon2d worker returned no key."));
+                return;
+            }
+            resolve(ownedBytes(event.data.key));
+        }, { once: true });
+        worker.addEventListener("error", (event) => {
+            worker.terminate();
+            reject(new Error(`Argon2d worker failed: ${event.message}`));
+        }, { once: true });
+        worker.postMessage({ password, salt });
+    });
 }
 
 async function verifyPassword(
     event: PackedEventData,
     password: string,
-    onProgress?: (progress: number) => void,
 ): Promise<Uint8Array<ArrayBuffer>> {
     const verifier = event.passwordVerifier;
     if (!verifier) throw new Error(`Password verifier is missing for ${event.eventName}.`);
+    if (
+        verifier.algorithm !== ARGON2_ALGORITHM
+        || verifier.memoryKiB !== ARGON2_MEMORY_KIB
+        || verifier.iterations !== ARGON2_ITERATIONS
+        || verifier.parallelism !== ARGON2_PARALLELISM
+    ) {
+        throw new Error(`Unsupported Argon2d parameters for ${event.eventName}.`);
+    }
     const salt = fromHex(verifier.salt, 16);
     const iv = fromHex(verifier.iv, 12);
     const encryptedPhrase = fromHex(verifier.ciphertext);
     if (encryptedPhrase.length < 16) throw new Error("Invalid password verifier ciphertext.");
-    const keyBytes = await deriveKey(password, salt, onProgress);
+    const keyBytes = await deriveKeyInWorker(password, salt);
     const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
     try {
         const plaintext = await crypto.subtle.decrypt(
@@ -117,7 +147,7 @@ async function decryptPackedFile(
     keyBytes: Uint8Array<ArrayBuffer>,
 ): Promise<Uint8Array<ArrayBuffer>> {
     if (bytes.length < 52) throw new Error("Invalid encrypted archive.");
-    if (new TextDecoder().decode(bytes.slice(0, 8)) !== "VEXENC1\u0000") {
+    if (new TextDecoder().decode(bytes.slice(0, 8)) !== "VEXARG1\u0000") {
         throw new Error("Invalid encrypted archive format.");
     }
     if (!event.passwordVerifier || hex(bytes.slice(8, 24)) !== event.passwordVerifier.salt) {
@@ -164,7 +194,6 @@ export async function loadPackedEvent(
     event: PackedEventData,
     fetchArchive: (url: string, signal?: AbortSignal) => Promise<Response>,
     getPassword?: (event: PackedEventData) => string | null | Promise<string | null>,
-    onPasswordCheckProgress?: (progress: number) => void,
     onArchiveDownloadProgress?: (progress: number) => void,
 ): Promise<PackedEventFiles> {
     let archiveBytes: Uint8Array<ArrayBuffer>;
@@ -184,7 +213,7 @@ export async function loadPackedEvent(
             (error: unknown) => ({ error }),
         );
         try {
-            keyBytes = await verifyPassword(event, password, onPasswordCheckProgress);
+            keyBytes = await verifyPassword(event, password);
         } catch (error) {
             controller.abort();
             await archiveOutcome;

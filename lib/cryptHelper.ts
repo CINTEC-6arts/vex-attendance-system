@@ -1,30 +1,23 @@
 
 
-import { createCipheriv, createDecipheriv, createHash, randomBytes, scrypt } from 'crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 import fs from 'fs';
 import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
+import {
+    ARGON2_ALGORITHM,
+    ARGON2_ITERATIONS,
+    ARGON2_MEMORY_KIB,
+    ARGON2_PARALLELISM,
+    deriveArgon2Key,
+} from './argon';
 import type { PasswordVerifier } from './types';
 
-const KEY_LENGTH = 32;
 const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
-const FILE_MAGIC = Buffer.from('VEXENC1\0');
+const FILE_MAGIC = Buffer.from('VEXARG1\0');
 const HEADER_LENGTH = FILE_MAGIC.length + SALT_LENGTH + IV_LENGTH;
-
-function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-        scrypt(password, salt, KEY_LENGTH, (error, key) => {
-            if (error) {
-                reject(error);
-                return;
-            }
-
-            resolve(key);
-        });
-    });
-}
 
 export async function encryptFile(
     inputFilePath: string,
@@ -38,7 +31,7 @@ export async function encryptFile(
 
     const salt = randomBytes(SALT_LENGTH);
     const iv = randomBytes(IV_LENGTH);
-    const key = await deriveKey(password, salt);
+    const key = Buffer.from(await deriveArgon2Key(password, salt));
     const verifierIv = randomBytes(IV_LENGTH);
     const verifierCipher = createCipheriv('aes-256-gcm', key, verifierIv);
     verifierCipher.setAAD(Buffer.from(binding, 'utf8'));
@@ -61,6 +54,10 @@ export async function encryptFile(
     output.write(Buffer.concat([FILE_MAGIC, salt, iv]));
     await pipeline(fs.createReadStream(inputFilePath), cipher, appendAuthTag, output);
     return {
+        algorithm: ARGON2_ALGORITHM,
+        memoryKiB: ARGON2_MEMORY_KIB,
+        iterations: ARGON2_ITERATIONS,
+        parallelism: ARGON2_PARALLELISM,
         salt: salt.toString('hex'),
         iv: verifierIv.toString('hex'),
         ciphertext: verifierCiphertext.toString('hex'),
@@ -100,7 +97,7 @@ export async function decryptFile(
 
         const salt = header.subarray(FILE_MAGIC.length, FILE_MAGIC.length + SALT_LENGTH);
         const iv = header.subarray(FILE_MAGIC.length + SALT_LENGTH, HEADER_LENGTH);
-        const key = await deriveKey(password, salt);
+        const key = Buffer.from(await deriveArgon2Key(password, salt));
         const decipher = createDecipheriv('aes-256-gcm', key, iv);
         decipher.setAuthTag(authTag);
 

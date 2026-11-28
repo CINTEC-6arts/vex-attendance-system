@@ -41,7 +41,6 @@ function requestEventPassword(event: PackedEventData): Promise<string | null> {
             isCheckingPassword = true;
             removeListeners();
             core.passwordDialogMessage.textContent = "Checking password…";
-            core.passwordProgress.value = 0;
             core.passwordProgress.hidden = false;
             core.passwordInput.disabled = true;
             core.cancelPasswordButton.disabled = true;
@@ -257,10 +256,6 @@ async function loadRecords() {
                 event,
                 fetchWithRetry,
                 (packedEvent) => packedEvent.isEncrypted ? requestEventPassword(packedEvent) : "",
-                (progress) => {
-                    core.passwordDialogMessage.textContent = `Checking password… ${Math.round(progress * 100)}%`;
-                    core.passwordProgress.value = progress;
-                },
                 (progress) => {
                     core.loadingProgress.value = progress;
                 },
