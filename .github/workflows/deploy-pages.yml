@@ -20,8 +20,14 @@ jobs:
         steps:
             - name: Check out repository
               uses: actions/checkout@v4
-            - name: Update data submodule to latest main
-              run: git submodule update --init --remote vex-attendance-system-data
+            - name: Check out latest data submodule
+              uses: actions/checkout@v4
+              with:
+                  repository: CINTEC-6arts/vex-attendance-system-data
+                  ref: main
+                  token: ${{ secrets.DATA_SUBMODULE_READ_TOKEN }}
+                  path: vex-attendance-system-data
+                  persist-credentials: false
             - name: Set up Bun
               uses: oven-sh/setup-bun@v2
               with:
