@@ -6,7 +6,7 @@ core.searchInput.addEventListener("input", (event) => {
     core.renderPreservingScrollCallback();
 });
 
-core.eventFilter.addEventListener("change", (event) => {
+core.eventFilter.addEventListener("change", async (event) => {
     const nextEventId = (event.target as HTMLSelectElement).value;
     if (!nextEventId) {
         core.eventFilter.value = core.state.eventId;
@@ -15,9 +15,15 @@ core.eventFilter.addEventListener("change", (event) => {
     if (nextEventId === core.state.eventId) return;
     const nextEvent = core.events.find((item) => item.id === nextEventId);
     const nextEventLabel = nextEvent?.label || "Select event...";
-    if (core.state.eventId && !window.confirm(`Switch to ${nextEventLabel}? Attendance is tracked separately for each event.`)) {
-        core.eventFilter.value = core.state.eventId;
-        return;
+    if (core.state.eventId) {
+        const confirmed = await core.confirmPopup(
+            `Switch to ${nextEventLabel}? Attendance is tracked separately for each event.`,
+            { title: "Switch event?", confirmLabel: "Switch" },
+        );
+        if (!confirmed) {
+            core.eventFilter.value = core.state.eventId;
+            return;
+        }
     }
     void app.switchEvent(nextEventId);
 });
@@ -205,8 +211,12 @@ core.results.addEventListener("click", (event) => {
     core.renderPreservingScrollCallback();
 });
 
-core.resetButton.addEventListener("click", () => {
-    if (!window.confirm("Delete all saved attendance data for today? This cannot be undone.")) return;
+core.resetButton.addEventListener("click", async () => {
+    const confirmed = await core.confirmPopup(
+        "Delete all saved attendance data for today? This cannot be undone.",
+        { title: "Reset attendance?", confirmLabel: "Delete", destructive: true },
+    );
+    if (!confirmed) return;
     core.state.records.forEach((record) => { delete core.state.attendance[core.attendanceKey(record)]; });
     core.saveAttendance();
     app.render();

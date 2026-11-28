@@ -848,6 +848,31 @@ select:focus {
     color: var(--accent);
 }
 
+.confirm-dialog-icon {
+    color: var(--accent);
+}
+
+.confirm-dialog-accept.primary {
+    background: var(--accent-blue-button);
+    color: var(--white);
+}
+
+.confirm-dialog-accept.primary:hover,
+.confirm-dialog-accept.primary:focus-visible {
+    background: var(--accent);
+    color: var(--background);
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.confirm-dialog-accept.danger:hover,
+.confirm-dialog-accept.danger:focus-visible {
+    background: var(--danger);
+    color: var(--white);
+    outline: 2px solid var(--danger-light);
+    outline-offset: 2px;
+}
+
 .password-input-label {
     display: block;
     margin-top: 20px;

@@ -321,6 +321,20 @@
                 </div>
             </form>
         </dialog>
+        <dialog id="confirm-dialog" class="error-dialog confirm-dialog">
+            <div class="error-dialog-content">
+                <button id="close-confirm" class="clear-filters icon-action sync-close" type="button" aria-label="Close confirmation" title="Close">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+                <span class="material-symbols-outlined error-dialog-icon confirm-dialog-icon" aria-hidden="true">help</span>
+                <h2 id="confirm-dialog-title"></h2>
+                <p id="confirm-dialog-message"></p>
+                <div class="error-dialog-actions">
+                    <button id="cancel-confirm" class="action-button secondary error-dialog-action" type="button">Cancel</button>
+                    <button id="accept-confirm" class="action-button error-dialog-action confirm-dialog-accept" type="button"></button>
+                </div>
+            </div>
+        </dialog>
         <dialog id="live-sync-success-dialog" class="sync-success-dialog">
             <div class="sync-success-dialog-content">
                 <button id="close-live-sync-success" class="clear-filters icon-action sync-close" type="button" aria-label="Close success message" title="Close success message">

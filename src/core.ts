@@ -133,6 +133,12 @@ export const passwordDialogMessage = query<HTMLElement>("#password-dialog-messag
 export const passwordInput = query<HTMLInputElement>("#event-password");
 export const cancelPasswordButton = query<HTMLButtonElement>("#cancel-password");
 export const cancelPasswordCloseButton = query<HTMLButtonElement>("#cancel-password-close");
+export const confirmDialog = query<HTMLDialogElement>("#confirm-dialog");
+export const confirmDialogTitle = query<HTMLElement>("#confirm-dialog-title");
+export const confirmDialogMessage = query<HTMLElement>("#confirm-dialog-message");
+export const acceptConfirmButton = query<HTMLButtonElement>("#accept-confirm");
+export const cancelConfirmButton = query<HTMLButtonElement>("#cancel-confirm");
+export const closeConfirmButton = query<HTMLButtonElement>("#close-confirm");
 export const resetButton = query<HTMLButtonElement>("#reset-attendance");
 export const syncAttendanceButton = query<HTMLButtonElement>("#sync-attendance");
 export const syncDialog = query<HTMLDialogElement>("#sync-dialog");
@@ -243,6 +249,42 @@ export function showPasswordErrorPopup(message: string): void {
     errorDialogMessage.textContent = message;
     errorDialogActions.hidden = false;
     if (!errorDialog.open) errorDialog.showModal();
+}
+export function confirmPopup(
+    message: string,
+    options: { title: string; confirmLabel: string; destructive?: boolean },
+): Promise<boolean> {
+    confirmDialogTitle.textContent = options.title;
+    confirmDialogMessage.textContent = message;
+    acceptConfirmButton.textContent = options.confirmLabel;
+    acceptConfirmButton.classList.toggle("danger", options.destructive === true);
+    acceptConfirmButton.classList.toggle("primary", options.destructive !== true);
+
+    return new Promise((resolve) => {
+        let settled = false;
+        const finish = (accepted: boolean): void => {
+            if (settled) return;
+            settled = true;
+            confirmDialog.close();
+            acceptConfirmButton.removeEventListener("click", onAccept);
+            cancelConfirmButton.removeEventListener("click", onCancel);
+            closeConfirmButton.removeEventListener("click", onCancel);
+            confirmDialog.removeEventListener("cancel", onDialogCancel);
+            resolve(accepted);
+        };
+        const onAccept = (): void => finish(true);
+        const onCancel = (): void => finish(false);
+        const onDialogCancel = (event: Event): void => {
+            event.preventDefault();
+            finish(false);
+        };
+
+        acceptConfirmButton.addEventListener("click", onAccept);
+        cancelConfirmButton.addEventListener("click", onCancel);
+        closeConfirmButton.addEventListener("click", onCancel);
+        confirmDialog.addEventListener("cancel", onDialogCancel);
+        confirmDialog.showModal();
+    });
 }
 export async function getDatasetHash(): Promise<string> {
     const canonical = JSON.stringify(state.records);
