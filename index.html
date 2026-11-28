@@ -305,6 +305,22 @@
                 </div>
             </div>
         </dialog>
+        <dialog id="password-dialog" class="error-dialog password-dialog">
+            <form id="password-form" class="error-dialog-content">
+                <button id="cancel-password-close" class="clear-filters icon-action sync-close" type="button" aria-label="Cancel password entry" title="Cancel">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+                <span class="material-symbols-outlined error-dialog-icon password-dialog-icon" aria-hidden="true">lock</span>
+                <h2>Enter password</h2>
+                <p id="password-dialog-message"></p>
+                <label class="password-input-label" for="event-password">Password</label>
+                <input id="event-password" class="password-input" type="password" autocomplete="current-password" required />
+                <div class="error-dialog-actions">
+                    <button id="cancel-password" class="action-button secondary error-dialog-action" type="button">Cancel</button>
+                    <button class="action-button danger error-dialog-action" type="submit">Continue</button>
+                </div>
+            </form>
+        </dialog>
         <dialog id="live-sync-success-dialog" class="sync-success-dialog">
             <div class="sync-success-dialog-content">
                 <button id="close-live-sync-success" class="clear-filters icon-action sync-close" type="button" aria-label="Close success message" title="Close success message">

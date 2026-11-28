@@ -90,7 +90,7 @@ function parseTar(tarBytes: Uint8Array): Map<string, Uint8Array> {
 export async function loadPackedEvent(
     event: PackedEventData,
     fetchArchive: (url: string) => Promise<Response>,
-    getPassword?: (event: PackedEventData) => string | null,
+    getPassword?: (event: PackedEventData) => string | null | Promise<string | null>,
 ): Promise<PackedEventFiles> {
     const archiveResponse = await fetchArchive(`data/${encodeURIComponent(event.artifactPath)}`);
     const archiveBytes = ownedBytes(new Uint8Array(await archiveResponse.arrayBuffer()));
@@ -103,7 +103,7 @@ export async function loadPackedEvent(
 
     let tarBytes: Uint8Array<ArrayBuffer>;
     if (event.isEncrypted) {
-        const password = getPassword?.(event);
+        const password = await getPassword?.(event);
         if (password === null) throw new PasswordCancelledError();
         if (!password) throw new WrongPasswordError(event.eventName);
         tarBytes = await decryptPackedFile(archiveBytes, password, event.eventName);

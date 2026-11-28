@@ -10,6 +10,45 @@ import type { PackedEventData } from "../lib/types";
 const packedEvents = new Map<string, PackedEventData>();
 const packedEventFiles = new Map<string, PackedEventFiles>();
 
+function requestEventPassword(event: PackedEventData): Promise<string | null> {
+    return new Promise((resolve) => {
+        let settled = false;
+        const finish = (password: string | null): void => {
+            if (settled) return;
+            settled = true;
+            core.passwordDialog.close();
+            core.passwordForm.removeEventListener("submit", onSubmit);
+            core.cancelPasswordButton.removeEventListener("click", onCancel);
+            core.cancelPasswordCloseButton.removeEventListener("click", onCancel);
+            core.passwordDialog.removeEventListener("cancel", onDialogCancel);
+            resolve(password);
+        };
+        const onSubmit = (submitEvent: SubmitEvent): void => {
+            submitEvent.preventDefault();
+            const password = core.passwordInput.value;
+            core.passwordInput.value = "";
+            finish(password);
+        };
+        const onCancel = (): void => {
+            core.passwordInput.value = "";
+            finish(null);
+        };
+        const onDialogCancel = (cancelEvent: Event): void => {
+            cancelEvent.preventDefault();
+            onCancel();
+        };
+
+        core.passwordDialogMessage.textContent = `Enter the password to open ${event.eventName}.`;
+        core.passwordInput.value = "";
+        core.passwordForm.addEventListener("submit", onSubmit);
+        core.cancelPasswordButton.addEventListener("click", onCancel);
+        core.cancelPasswordCloseButton.addEventListener("click", onCancel);
+        core.passwordDialog.addEventListener("cancel", onDialogCancel);
+        core.passwordDialog.showModal();
+        core.passwordInput.focus();
+    });
+}
+
 async function fetchWithRetry(url: string): Promise<Response> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= core.maxFetchAttempts; attempt += 1) {
@@ -189,7 +228,7 @@ async function loadRecords() {
     if (!files) {
         files = await loadPackedEvent(event, fetchWithRetry, (packedEvent) =>
             packedEvent.isEncrypted
-                ? window.prompt(`Enter the password for ${packedEvent.eventName}:`)
+                ? requestEventPassword(packedEvent)
                 : ""
         );
         packedEventFiles.set(core.state.eventId, files);

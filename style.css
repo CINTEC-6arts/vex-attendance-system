@@ -840,6 +840,41 @@ select:focus {
     font-size: 19px;
 }
 
+.password-dialog-content {
+    display: block;
+}
+
+.password-dialog-icon {
+    color: var(--accent);
+}
+
+.password-input-label {
+    display: block;
+    margin-top: 20px;
+    margin-bottom: 7px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.password-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--line-bright);
+    border-radius: 9px;
+    outline: none;
+    background: var(--surface-input);
+    color: var(--ink);
+    font: inherit;
+}
+
+.password-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
 .sync-success-dialog {
     width: min(420px, calc(100vw - 32px));
     padding: 0;
